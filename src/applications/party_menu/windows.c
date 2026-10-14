@@ -756,7 +756,14 @@ void PartyMenu_LoadContextMenuStrings(PartyMenuApplication *application)
 
 void PartyMenu_SetKnownFieldMove(PartyMenuApplication *application, u16 move, u8 menuEntry)
 {
-    String *string = MessageLoader_GetNewString(application->messageLoader, PartyMenu_Text_FieldMove0 + menuEntry);
+    u32 textID = PartyMenu_Text_FieldMove0 + menuEntry;
+    String *string;
+
+    if (menuEntry >= 4) {
+        textID = PartyMenu_Text_FieldMove0;
+    }
+
+    string = MessageLoader_GetNewString(application->messageLoader, textID);
     StringTemplate_SetMoveName(application->template, 0, move);
     StringTemplate_Format(application->template, application->menuStrings[PARTY_MENU_STR_MOVE0 + menuEntry], string);
     String_Free(string);

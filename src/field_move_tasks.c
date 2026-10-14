@@ -323,6 +323,7 @@ static void FieldMoves_FreeTaskData(FieldMoveTaskData *taskData)
     Heap_Free(taskData);
 }
 
+
 static enum FieldMoveError FieldMoves_CheckCut(const FieldMoveContext *fieldMoveContext)
 {
     if (PlayerOutsideLinkRoom(fieldMoveContext) == FALSE) {
@@ -333,7 +334,7 @@ static enum FieldMoveError FieldMoves_CheckCut(const FieldMoveContext *fieldMove
         return FIELD_MOVE_ERROR_BADGE;
     }
 
-    if (FieldMoves_IsMoveUsable(fieldMoveContext, FIELD_MOVE_CUT)) {
+    if (fieldMoveContext->mapObj != NULL) {
         return FIELD_MOVE_ERROR_NONE;
     }
 
@@ -417,14 +418,6 @@ static enum FieldMoveError FieldMoves_CheckSurf(const FieldMoveContext *fieldMov
 
     if (PlayerAvatar_GetPlayerState(fieldMoveContext->fieldSystem->playerAvatar) == 0x2) {
         return FIELD_MOVE_ERROR_STATE;
-    }
-
-    if (!(FieldMoves_IsMoveUsable(fieldMoveContext, FIELD_MOVE_SURF))) {
-        return FIELD_MOVE_ERROR_LOCATION;
-    }
-
-    if (PlayerTravellingWithPartner(fieldMoveContext) == TRUE) {
-        return FIELD_MOVE_ERROR_PARTNER;
     }
 
     return FIELD_MOVE_ERROR_NONE;
@@ -589,10 +582,6 @@ static enum FieldMoveError FieldMoves_CheckWaterfall(const FieldMoveContext *fie
 
     if (PlayerHasRequiredBadge(fieldMoveContext, BADGE_ID_BEACON) == FALSE) {
         return FIELD_MOVE_ERROR_BADGE;
-    }
-
-    if (FieldMoves_IsMoveUsable(fieldMoveContext, FIELD_MOVE_WATERFALL)) {
-        return FIELD_MOVE_ERROR_NONE;
     }
 
     return FIELD_MOVE_ERROR_LOCATION;

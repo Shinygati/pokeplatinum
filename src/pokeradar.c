@@ -59,6 +59,7 @@ static u8 GetLowestChainRecordSlot(FieldSystem *fieldSystem);
 static BOOL CheckPatchContinueChain(const u8 patchRing, const int battleResult);
 static BOOL CheckPatchShiny(const int param0);
 static void IncWithCap(int *param0);
+static void FinishOldPatchAnims(RadarChain *chain);
 
 RadarChain *RadarChain_Init(const enum HeapID heapID)
 {
@@ -95,7 +96,8 @@ BOOL RadarSpawnPatches(FieldSystem *fieldSystem, const int param1, const int par
     u8 v4;
     int v5, v6;
     u8 v7;
-    u8 ringTileCount[NUM_GRASS_PATCHES] = { // Number of tiles in each ring of the radar. Lowest being the most outer ring
+
+    u8 ringTileCount[NUM_GRASS_PATCHES] = {
         32,
         24,
         16,
@@ -103,45 +105,64 @@ BOOL RadarSpawnPatches(FieldSystem *fieldSystem, const int param1, const int par
     };
 
     const VecFx32 *v8 = PlayerAvatar_GetPos(fieldSystem->playerAvatar);
-    v7 = 0;
 
-    for (u8 patchRing = 0; patchRing < NUM_GRASS_PATCHES; patchRing++) {
-        v3 = LCRNG_RandMod(ringTileCount[patchRing]);
-        v1 = 9 - (patchRing * 2);
-        v2 = 9 - (patchRing * 2);
-        v4 = v3 / v1;
+    for (u8 attempt = 0; attempt < 8; attempt++)
+    {
+        v7 = 0;
 
-        if (v4 == 0) {
-            v5 = patchRing + v3 % v1;
-            v6 = patchRing;
-        } else if (v4 == 1) {
-            v5 = patchRing + v3 % v1;
-            v6 = patchRing + v2 - 1;
-        } else {
-            GF_ASSERT(v3 >= (v1 * 2));
-            v4 = v3 - (v1 * 2);
-            v6 = patchRing + (v4 / 2) + 1;
-            if (v4 % 2 == 0) {
-                v5 = patchRing;
+        for (u8 patchRing = 0; patchRing < NUM_GRASS_PATCHES; patchRing++)
+        {
+            v3 = LCRNG_RandMod(ringTileCount[patchRing]);
+            v1 = 9 - (patchRing * 2);
+            v2 = 9 - (patchRing * 2);
+            v4 = v3 / v1;
+
+            if (v4 == 0) {
+                v5 = patchRing + v3 % v1;
+                v6 = patchRing;
+            } else if (v4 == 1) {
+                v5 = patchRing + v3 % v1;
+                v6 = patchRing + v2 - 1;
             } else {
-                v5 = patchRing + v1 - 1;
+                GF_ASSERT(v3 >= (v1 * 2));
+                v4 = v3 - (v1 * 2);
+                v6 = patchRing + (v4 / 2) + 1;
+                if (v4 % 2 == 0) {
+                    v5 = patchRing;
+                } else {
+                    v5 = patchRing + v1 - 1;
+                }
+            }
+
+            BOOL v10 = CheckTileIsGrass(
+                fieldSystem,
+                v8->y,
+                param1,
+                param2,
+                v5,
+                v6,
+                &chain->patch[patchRing]
+            );
+
+            if (v10) {
+                v7++;
             }
         }
 
-        BOOL v10 = CheckTileIsGrass(fieldSystem, v8->y, param1, param2, v5, v6, &chain->patch[patchRing]);
-        if (v10) {
-            v7++;
+        if (v7 > 0) {
+            chain->active = TRUE;
+            return TRUE;
         }
     }
 
-    if (v7 == 0) {
-        RadarChain_Clear(chain);
-        FieldBGM_TryFadeOut(fieldSystem, FieldBGM_GetEffective(fieldSystem, fieldSystem->location->mapHeaderID), 1);
-    } else {
-        chain->active = TRUE;
-    }
+    RadarChain_Clear(chain);
+    FieldBGM_TryFadeOut(
+        fieldSystem,
+        FieldBGM_GetEffective(fieldSystem, fieldSystem->location->mapHeaderID),
+        1
+    );
 
-    return chain->active;
+    return FALSE;
 }
 
 void SetupGrassPatches(FieldSystem *fieldSystem, const int param1, RadarChain *chain)
@@ -192,8 +213,6 @@ BOOL sub_02069690(RadarChain *chain)
     for (u8 patchRing = 0; patchRing < NUM_GRASS_PATCHES; patchRing++) {
         if (chain->patch[patchRing].unk_18 != NULL) {
             if (ov5_021F31A8(chain->patch[patchRing].unk_18)) {
-                OverworldAnimManager_Finish(chain->patch[patchRing].unk_18);
-                chain->patch[patchRing].unk_18 = NULL;
                 v0++;
             }
         } else {
@@ -263,39 +282,23 @@ const BOOL sub_02069798(const RadarChain *chain)
 
 void PokeRadar_ClearIfAllOutOfView(FieldSystem *fieldSystem)
 {
-    BOOL patchInView;
-    GrassPatch *patch;
-    int patchRing;
-
-    if (!fieldSystem->chain->active || fieldSystem->task != NULL) {
-        return;
-    }
-
-    for (patchRing = 0; patchRing < NUM_GRASS_PATCHES; patchRing++) {
-        patch = &(fieldSystem->chain->patch[patchRing]);
-        patchInView = GFXBoxTest_IsBoxAtPositionInView(&patch->position, &fieldSystem->chain->grassPatchVolume);
-        if (patch->active && !patchInView) {
-            patch->active = FALSE;
-        }
-    }
-
-    int inactiveRadarRings = 0;
-    for (patchRing = 0; patchRing < NUM_GRASS_PATCHES; patchRing++) {
-        patch = &(fieldSystem->chain->patch[patchRing]);
-        if (patch->active == 0) {
-            inactiveRadarRings++;
-        }
-    }
-
-    if (inactiveRadarRings == 4) {
-        RadarChain_Clear(fieldSystem->chain);
-        FieldBGM_TryFadeOut(fieldSystem, FieldBGM_GetEffective(fieldSystem, fieldSystem->location->mapHeaderID), 1);
-    }
+    return;
 }
 
 BOOL GetRadarChainActive(const RadarChain *chain)
 {
     return chain->active;
+}
+
+// Releases the (frozen) animation managers from a previous radar use so the old patches disappear.
+static void FinishOldPatchAnims(RadarChain *chain)
+{
+    for (u8 patchRing = 0; patchRing < NUM_GRASS_PATCHES; patchRing++) {
+        if (chain->patch[patchRing].unk_18 != NULL) {
+            OverworldAnimManager_Finish(chain->patch[patchRing].unk_18);
+            chain->patch[patchRing].unk_18 = NULL;
+        }
+    }
 }
 
 static BOOL CheckTileIsGrass(FieldSystem *fieldSystem, const fx32 param1, const int param2, const int param3, const u8 param4, const u8 param5, GrassPatch *patch)
@@ -398,8 +401,8 @@ static u8 GetLowestChainRecordSlot(FieldSystem *fieldSystem)
 static BOOL CheckPatchContinueChain(const u8 patchRing, const int battleResult)
 {
     u8 *rates;
-    u8 ratesNormal[4] = { 88, 68, 48, 28 };
-    u8 ratesBoosted[4] = { 98, 78, 58, 38 };
+    u8 ratesNormal[4] = { 100, 98, 95, 85 };
+    u8 ratesBoosted[4] = { 100, 98, 95, 85 };
 
     if (battleResult == BATTLE_RESULT_WIN) { // If the battle resulted in fainting the mon, use the regular rates
         rates = ratesNormal;
@@ -432,6 +435,7 @@ BOOL RefreshRadarChain(FieldTask *taskMan)
             *v2 = 0;
             int v3 = PlayerAvatar_GetXPos(fieldSystem->playerAvatar);
             int v4 = PlayerAvatar_GetZPos(fieldSystem->playerAvatar);
+            FinishOldPatchAnims(fieldSystem->chain); // Clear the frozen patches from the previous radar use
             RadarSpawnPatches(fieldSystem, v3, v4, fieldSystem->chain);
             if (fieldSystem->chain->active) {
                 SetupGrassPatches(fieldSystem, 0x1, fieldSystem->chain);
@@ -471,9 +475,9 @@ static BOOL CheckPatchShiny(const int chainCount)
         return FALSE;
     }
 
-    int rate = 8200 - (chainCount * 200);
-    if (rate < 200) {
-        rate = 200;
+    int rate = 8100 - (chainCount * 200);
+    if (rate < 64) {
+        rate = 64;
     }
 
     if (!LCRNG_RandMod(rate)) {

@@ -3246,7 +3246,15 @@ static int BattleSystem_Cursor_Menu(BattleSubscreen *btlSubscreen, BOOL cursorHi
                     return i;
                 }
             }
-        }
+        } else if (btlSubscreen->activeMenuConfigIndex != 5 && btlSubscreen->activeMenuConfigIndex != 6) {
+			// Jump the cursor to Run without selecting it
+			cursor->x = 1;
+			cursor->y = 1;
+			Sound_PlayEffect(SE_CONFIRM_sseq_3);
+			
+			buttonId = sBattleMenuButtonLayout[cursor->y][cursor->x];
+			BattleSystem_DrawCursor(btlSubscreen->cursorRenderer, battleMenuConfig->touchScreenRects[buttonId].rect.left + 8, battleMenuConfig->touchScreenRects[buttonId].rect.right - 8, battleMenuConfig->touchScreenRects[buttonId].rect.top + 8, battleMenuConfig->touchScreenRects[buttonId].rect.bottom - 8, (192 + 80) << FX32_SHIFT);
+		}
         break;
     }
 

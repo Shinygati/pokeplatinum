@@ -2206,10 +2206,8 @@ static BOOL BtlCmd_CalcExpGain(BattleSystem *battleSys, BattleContext *battleCtx
                     totalMonsGainingExp++;
                 }
 
-                u16 item = Pokemon_GetValue(mon, MON_DATA_HELD_ITEM, NULL);
-                if (BattleSystem_GetItemData(battleCtx, item, ITEM_PARAM_HOLD_EFFECT) == HOLD_EFFECT_EXP_SHARE) {
-                    totalMonsWithExpShare++;
-                }
+                // Exp. Share is always active: every healthy party member counts
+                totalMonsWithExpShare++;
             }
         }
 
@@ -9706,7 +9704,9 @@ static void BattleScript_GetExpTask(SysTask *task, void *inData)
         item = Pokemon_GetValue(mon, MON_DATA_HELD_ITEM, NULL);
         itemEffect = Item_LoadParam(item, ITEM_PARAM_HOLD_EFFECT, HEAP_ID_BATTLE);
 
-        if (itemEffect == HOLD_EFFECT_EXP_SHARE || (data->battleCtx->sideGetExpMask[battler] & FlagIndex(slot))) {
+        // CHANGED: Exp. Share is always active, so any healthy mon is eligible
+        if ((Pokemon_GetValue(mon, MON_DATA_SPECIES, NULL) && Pokemon_GetValue(mon, MON_DATA_HP, NULL))
+            || (data->battleCtx->sideGetExpMask[battler] & FlagIndex(slot))) {
             break;
         }
     }
@@ -9742,9 +9742,8 @@ static void BattleScript_GetExpTask(SysTask *task, void *inData)
                 totalExp = data->battleCtx->gainedExp;
             }
 
-            if (itemEffect == HOLD_EFFECT_EXP_SHARE) {
-                totalExp += data->battleCtx->sharedExp;
-            }
+            // CHANGED: shared EXP always applies (no Exp. Share item needed)
+            totalExp += data->battleCtx->sharedExp;
 
             if (itemEffect == HOLD_EFFECT_EXP_UP) {
                 totalExp = totalExp * 150 / 100;
@@ -9763,6 +9762,8 @@ static void BattleScript_GetExpTask(SysTask *task, void *inData)
 
                 msg.id = BattleStrings_Text_PokemonGainedABoostedExpPoints; // "{0} gained a boosted {1} Exp. Points!"
             }
+
+            totalExp *= 2; // x2 EXP
 
             u32 newExp = Pokemon_GetValue(mon, MON_DATA_EXPERIENCE, NULL);
             data->tmpData[GET_EXP_NEW_EXP] = newExp - Pokemon_GetCurrentLevelBaseExp(mon);

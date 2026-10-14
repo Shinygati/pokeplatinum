@@ -715,22 +715,18 @@ static void Egg_SetInitialData(Pokemon *mon, u16 species, Daycare *daycare, u32 
     u8 hatchCycles = SpeciesData_GetSpeciesValue(species, SPECIES_DATA_HATCH_CYCLES);
 
     personality = Daycare_GetOffspringPersonality(daycare);
-
-    if (Daycare_AreParentLanguagesDifferent(daycare)) {
-        int i;
-
+	
         if (Pokemon_IsPersonalityShiny(monOTID, personality) == FALSE) {
-            for (i = 0; i < 4; i++) {
+			int i;
+			
+            for (i = 0; i < 16; i++) {
                 personality = ARNG_Next(personality);
 
                 if (Pokemon_IsPersonalityShiny(monOTID, personality)) {
                     break;
                 }
             }
-        } else {
-            (void)0;
         }
-    }
 
     Pokemon_InitWith(mon, species, EGG_POKEMON_LEVEL, INIT_IVS_RANDOM, TRUE, personality, OTID_NOT_SET, 0);
 
@@ -764,6 +760,19 @@ void Daycare_GiveEggFromDaycare(Daycare *daycare, Party *party, TrainerInfo *tra
     Egg_SetInitialData(mon, species, daycare, monOTID, form);
 
     Egg_InheritIVs(mon, daycare);
+	
+	#define EGG_MIN_IV 15
+	
+	u8 i;
+	for (i = 0; i < STAT_MAX; i++) {
+		u8 iv = Pokemon_GetValue(mon, MON_DATA_HP_IV + i, NULL);
+		
+		if (iv < EGG_MIN_IV) {
+			iv = EGG_MIN_IV + (LCRNG_Next() % (32 - EGG_MIN_IV));
+			Pokemon_SetValue(mon, MON_DATA_HP_IV + i, &iv);
+		}
+	}
+	
     Egg_BuildMoveset(mon, Daycare_GetBoxMon(daycare, parentSlots[1]), Daycare_GetBoxMon(daycare, parentSlots[0]));
 
     UpdateMonStatusAndTrainerInfo(mon, trainerInfo, 3, SpecialMetLoc_GetId(1, 0), HEAP_ID_FIELD1);
@@ -903,16 +912,16 @@ static int Daycare_GetEggCycleLength(FieldSystem *fieldSystem)
     int i;
 
     if (FieldSystem_HasPenalty(fieldSystem)) {
-        return 255;
+        return 128;
     }
 
     for (i = 0; i < NELEMS(sEggCycleSpecialDates); i++) {
         if (sEggCycleSpecialDates[i] == date) {
-            return 230;
+            return 115;
         }
     }
 
-    return 255;
+    return 128;
 }
 
 BOOL Daycare_Update(Daycare *daycare, Party *party, FieldSystem *fieldSystem)
@@ -934,7 +943,7 @@ BOOL Daycare_Update(Daycare *daycare, Party *party, FieldSystem *fieldSystem)
     }
 
     if ((Daycare_HasEgg(daycare) == FALSE) && (monCount == NUM_DAYCARE_MONS)) {
-        if ((DaycareMon_GetSteps(Daycare_GetDaycareMon(daycare, 1)) & 0xff) == 0xff) {
+        if ((DaycareMon_GetSteps(Daycare_GetDaycareMon(daycare, 1)) & 0x7f) == 0x7f) {
             compatibilityScore = Daycare_GetCompatibilityScore(daycare);
             rand = LCRNG_Next();
             rand = (rand * 100) / 0xffff;
@@ -1071,9 +1080,9 @@ static u8 DaycareCompatibilityScoreToLevel(u32 compatibility)
     case PARENTS_INCOMPATIBLE:
         return 3;
     case PARENTS_LOW_COMPATIBILITY:
-        return 2;
+        return 0;
     case PARENTS_MED_COMPATIBILITY:
-        return 1;
+        return 0;
     case PARENTS_MAX_COMPATIBILITY:
         return 0;
     }

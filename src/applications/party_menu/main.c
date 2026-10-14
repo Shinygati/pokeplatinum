@@ -1793,6 +1793,7 @@ static u8 GetContextMenuEntriesForPartyMon(PartyMenuApplication *application, u8
     Pokemon *mon = Party_GetPokemonBySlotIndex(application->partyMenu->party, application->currPartySlot);
     u16 move;
     u8 fieldMoveIndex = 0, i, count = 0, fieldEffect;
+    BOOL hasFly = FALSE;
 
     menuEntriesBuffer[count] = 1;
     count++;
@@ -1806,6 +1807,10 @@ static u8 GetContextMenuEntriesForPartyMon(PartyMenuApplication *application, u8
                     break;
                 }
 
+                if (move == MOVE_FLY) {
+                    hasFly = TRUE;
+                }
+
                 fieldEffect = GetFieldMoveIndex(move);
 
                 if (fieldEffect != 0xff) {
@@ -1815,6 +1820,16 @@ static u8 GetContextMenuEntriesForPartyMon(PartyMenuApplication *application, u8
                     fieldMoveIndex++;
                 }
             }
+
+            if (hasFly == FALSE
+				&& ((Pokemon_GetValue(mon, MON_DATA_TYPE_1, NULL) == TYPE_FLYING)
+				|| (Pokemon_GetValue(mon, MON_DATA_TYPE_2, NULL) == TYPE_FLYING))) {
+				fieldEffect = GetFieldMoveIndex(MOVE_FLY);
+				menuEntriesBuffer[count] = fieldEffect;
+				count++;
+				PartyMenu_SetKnownFieldMove(application, MOVE_FLY, fieldMoveIndex);
+				fieldMoveIndex++;
+			}
 
             menuEntriesBuffer[count] = 0;
             count++;

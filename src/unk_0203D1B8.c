@@ -1373,6 +1373,20 @@ void sub_0203E224(FieldSystem *fieldSystem)
     FieldSystem_StartChildProcess(fieldSystem, &Unk_020EA328, fieldSystem->saveData);
 }
 
+static void GiveAllEventGifts(FieldSystem *fieldSystem)
+{
+    Bag *bag = SaveData_GetBag(fieldSystem->saveData);
+    VarsFlags *varsFlags = SaveData_GetVarsFlags(fieldSystem->saveData);
+
+    Bag_TryAddItem(bag, ITEM_MEMBER_CARD, 1, HEAP_ID_FIELD3);
+    Bag_TryAddItem(bag, ITEM_OAKS_LETTER, 1, HEAP_ID_FIELD3);
+    Bag_TryAddItem(bag, ITEM_SECRET_KEY, 1, HEAP_ID_FIELD3);
+
+    SystemVars_SetDistributionEventMagic(varsFlags, DISTRIBUTION_EVENT_DARKRAI);
+    SystemVars_SetDistributionEventMagic(varsFlags, DISTRIBUTION_EVENT_SHAYMIN);
+    SystemVars_SetDistributionEventMagic(varsFlags, DISTRIBUTION_EVENT_ROTOM);
+}
+
 void FieldTask_StartHallOfFame(FieldSystem *fieldSystem, HallOfFameDisplayData *displayData)
 {
     FS_EXTERN_OVERLAY(hall_of_fame);
@@ -1383,6 +1397,8 @@ void FieldTask_StartHallOfFame(FieldSystem *fieldSystem, HallOfFameDisplayData *
         .exit = HallOfFameManager_Exit,
         .overlayID = FS_OVERLAY_ID(hall_of_fame)
     };
+
+	GiveAllEventGifts(fieldSystem);
 
     FieldSystem_StartChildProcess(fieldSystem, &template, displayData);
 }

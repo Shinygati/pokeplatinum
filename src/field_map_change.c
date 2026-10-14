@@ -272,6 +272,13 @@ void FieldMapChange_UpdateGameData(FieldSystem *fieldSystem, BOOL noWarp)
     VarsFlags *varsFlags = SaveData_GetVarsFlags(fieldSystem->saveData);
     u16 weather = FieldSystem_GetWeather(fieldSystem, mapHeaderID);
 
+    // Automatically activate Defog in foggy areas and Flash in dark caves.
+    if (weather == OVERWORLD_WEATHER_FOG) {
+        SystemFlag_SetDefogActive(varsFlags);
+    } else if (weather == OVERWORLD_WEATHER_DARK_FLASH) {
+        SystemFlag_SetFlashActive(varsFlags);
+    }
+
     if ((weather == OVERWORLD_WEATHER_FOG && SystemFlag_CheckDefogActive(varsFlags) == TRUE)
         || (weather == OVERWORLD_WEATHER_DARK_FLASH && SystemFlag_CheckFlashActive(varsFlags) == TRUE)) {
         weather = OVERWORLD_WEATHER_CLEAR;

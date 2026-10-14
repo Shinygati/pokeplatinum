@@ -15,8 +15,6 @@ FlowerParadise_OnTransition:
     GoToIfEq VAR_MAP_LOCAL_0x00, FALSE, FlowerParadise_HideShaymin
     CheckItem ITEM_OAKS_LETTER, 1, VAR_MAP_LOCAL_0x00
     GoToIfEq VAR_MAP_LOCAL_0x00, FALSE, FlowerParadise_HideShaymin
-    CheckDistributionEvent DISTRIBUTION_EVENT_SHAYMIN, VAR_MAP_LOCAL_0x00
-    GoToIfEq VAR_MAP_LOCAL_0x00, FALSE, FlowerParadise_HideShaymin
     GoToIfSet FLAG_CAUGHT_SHAYMIN, FlowerParadise_HideShaymin
     ClearFlag FLAG_HIDE_FLOWER_PARADISE_SHAYMIN
     End

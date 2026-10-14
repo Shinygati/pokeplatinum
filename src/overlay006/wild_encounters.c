@@ -1044,23 +1044,55 @@ static void CreateWildMonShinyWithGenderOrNature(const u16 species, const u8 lev
     Heap_Free(newEncounter);
 }
 
-static void CreateWildMon(u16 species, u8 level, const int partyDest, const WildEncounters_FieldParams *encounterFieldParams, Pokemon *firstPartyMon, FieldBattleDTO *battleParams)
+#define WILD_SHINY_ODDS         512
+#define WILD_SHINY_MAX_ATTEMPTS 60000
+
+enum {
+    WILD_SHINY_REQ_NONE,
+    WILD_SHINY_REQ_SHINY,
+    WILD_SHINY_REQ_NOT_SHINY,
+};
+
+static int sWildShinyRequirement = WILD_SHINY_REQ_NONE;
+
+// Same PID loop the game normally uses: two LCRNG calls (low half first) until the nature matches.
+static u32 FindWildPersonality(const u8 nature)
 {
-    Pokemon *newEncounter = Pokemon_New(HEAP_ID_FIELD2);
-    Pokemon_Init(newEncounter);
-    BOOL hasRandomGender = TRUE;
+    u32 personality;
 
-    u32 speciesGenderRatio = SpeciesData_GetSpeciesValue(species, SPECIES_DATA_GENDER_RATIO);
+    do {
+        u32 low = LCRNG_Next() & 0xFFFF;
+        u32 high = LCRNG_Next() & 0xFFFF;
+        personality = low | (high << 16);
+    } while (Pokemon_GetNatureOf(personality) != nature);
 
-    switch (speciesGenderRatio) {
-    case GENDER_RATIO_MALE_ONLY:
-    case GENDER_RATIO_FEMALE_ONLY:
-    case GENDER_RATIO_NO_GENDER:
-        hasRandomGender = FALSE;
+    return personality;
+}
+
+static BOOL CreateWildMon(u16 species, u8 level, const int partyDest, const WildEncounters_FieldParams *encounterFieldParams, Pokemon *firstPartyMon, FieldBattleDTO *battleParams)
+{
+    BOOL hasRandomGender = FALSE;
+
+    // Only look up the species data when it can actually matter (lead has Cute Charm).
+    if (!encounterFieldParams->isFirstMonEgg && encounterFieldParams->firstMonAbility == ABILITY_CUTE_CHARM) {
+        u32 speciesGenderRatio = SpeciesData_GetSpeciesValue(species, SPECIES_DATA_GENDER_RATIO);
+
+        switch (speciesGenderRatio) {
+        case GENDER_RATIO_MALE_ONLY:
+        case GENDER_RATIO_FEMALE_ONLY:
+        case GENDER_RATIO_NO_GENDER:
+            break;
+        default:
+            hasRandomGender = TRUE;
+        }
     }
 
     // 2/3 chance for Cute Charm to force the encounter to be the opposite gender of the lead, if possible.
-    if (hasRandomGender && !encounterFieldParams->isFirstMonEgg && encounterFieldParams->firstMonAbility == ABILITY_CUTE_CHARM && LCRNG_RandMod(3) > 0) {
+    // This path has a fixed-form PID, so it ignores the shiny requirement.
+    if (hasRandomGender && LCRNG_RandMod(3) > 0) {
+        Pokemon *newEncounter = Pokemon_New(HEAP_ID_FIELD2);
+        Pokemon_Init(newEncounter);
+
         u8 gender = Pokemon_GetValue(firstPartyMon, MON_DATA_GENDER, NULL);
 
         if (gender == GENDER_FEMALE) {
@@ -1076,73 +1108,107 @@ static void CreateWildMon(u16 species, u8 level, const int partyDest, const Wild
 
         GF_ASSERT(AddWildMonToParty(partyDest, encounterFieldParams, newEncounter, battleParams));
         Heap_Free(newEncounter);
-        return;
+        return TRUE;
     }
 
-    sub_02074044(newEncounter, species, level, 32, GetNatureForWildMon(firstPartyMon, encounterFieldParams));
-    Pokemon_SetValue(newEncounter, MON_DATA_OT_ID, &encounterFieldParams->trainerID);
+    u8 nature = GetNatureForWildMon(firstPartyMon, encounterFieldParams);
+    u32 personality = FindWildPersonality(nature);
+    BOOL isShiny = Pokemon_IsPersonalityShiny(encounterFieldParams->trainerID, personality) != 0;
+
+    // Wrong shininess: throw this attempt away. The caller re-rolls slot/level/nature/PID from scratch.
+    if ((sWildShinyRequirement == WILD_SHINY_REQ_SHINY && !isShiny) || (sWildShinyRequirement == WILD_SHINY_REQ_NOT_SHINY && isShiny)) {
+        return FALSE;
+    }
+
+    Pokemon *newEncounter = Pokemon_New(HEAP_ID_FIELD2);
+    Pokemon_Init(newEncounter);
+    Pokemon_InitWith(newEncounter, species, level, INIT_IVS_RANDOM, TRUE, personality, OTID_SET, encounterFieldParams->trainerID);
 
     GF_ASSERT(AddWildMonToParty(partyDest, encounterFieldParams, newEncounter, battleParams));
     Heap_Free(newEncounter);
+    return TRUE;
 }
 
 static BOOL TryGenerateWildMon(Pokemon *firstPartyMon, const int fishingRodType, const WildEncounters_FieldParams *encounterFieldParams, const EncounterSlot *encounterTable, const u8 encounterType, const int partyDest, FieldBattleDTO *battleParams)
 {
-    BOOL forcedSlot;
-    u8 encounterSlot = 0;
-    u8 level = 0;
+    // Rolled once, before any slot/level/nature calls, so the frame PKHeX checks is untouched.
+    BOOL wantShiny = (LCRNG_RandMod(WILD_SHINY_ODDS) == 0);
+    int requirement = wantShiny ? WILD_SHINY_REQ_SHINY : WILD_SHINY_REQ_NOT_SHINY;
 
-    switch (encounterType) {
-    case ENCOUNTER_TYPE_GRASS:
-        forcedSlot = TryGetSlotForTypeMatchAbility(firstPartyMon, encounterFieldParams, encounterTable, MAX_GRASS_ENCOUNTERS, TYPE_STEEL, ABILITY_MAGNET_PULL, &encounterSlot);
+    for (int attempt = 0;; attempt++) {
+        BOOL forcedSlot;
+        u8 encounterSlot = 0;
+        u8 level = 0;
 
-        if (!forcedSlot) {
-            forcedSlot = TryGetSlotForTypeMatchAbility(firstPartyMon, encounterFieldParams, encounterTable, MAX_GRASS_ENCOUNTERS, TYPE_ELECTRIC, ABILITY_STATIC, &encounterSlot);
+        if (attempt >= WILD_SHINY_MAX_ATTEMPTS) {
+            requirement = WILD_SHINY_REQ_NONE; // safety valve, accept whatever comes
+        }
+
+        switch (encounterType) {
+        case ENCOUNTER_TYPE_GRASS:
+            forcedSlot = TryGetSlotForTypeMatchAbility(firstPartyMon, encounterFieldParams, encounterTable, MAX_GRASS_ENCOUNTERS, TYPE_STEEL, ABILITY_MAGNET_PULL, &encounterSlot);
 
             if (!forcedSlot) {
-                encounterSlot = GetGroundEncounterSlot();
+                forcedSlot = TryGetSlotForTypeMatchAbility(firstPartyMon, encounterFieldParams, encounterTable, MAX_GRASS_ENCOUNTERS, TYPE_ELECTRIC, ABILITY_STATIC, &encounterSlot);
+
+                if (!forcedSlot) {
+                    encounterSlot = GetGroundEncounterSlot();
+                }
             }
+
+            encounterSlot = TryFindHigherLevelSlot(encounterTable, encounterFieldParams, encounterSlot);
+            level = encounterTable[encounterSlot].maxLevel;
+            break;
+        case ENCOUNTER_TYPE_SURF:
+            // BUG: Magnet Pull doesn't function in water because its encounter slot gets overwritten when the Static check returns FALSE.
+            forcedSlot = TryGetSlotForTypeMatchAbility(firstPartyMon, encounterFieldParams, encounterTable, MAX_WATER_ENCOUNTERS, TYPE_STEEL, ABILITY_MAGNET_PULL, &encounterSlot);
+            forcedSlot = TryGetSlotForTypeMatchAbility(firstPartyMon, encounterFieldParams, encounterTable, MAX_WATER_ENCOUNTERS, TYPE_ELECTRIC, ABILITY_STATIC, &encounterSlot);
+
+            if (!forcedSlot) {
+                encounterSlot = GetWaterEncounterSlot();
+            }
+
+            level = GetWildMonLevel(&encounterTable[encounterSlot], encounterFieldParams);
+            break;
+        case ENCOUNTER_TYPE_FISHING:
+            // BUG: Magnet Pull doesn't function in water because its encounter slot gets overwritten when the Static check returns FALSE.
+            forcedSlot = TryGetSlotForTypeMatchAbility(firstPartyMon, encounterFieldParams, encounterTable, MAX_WATER_ENCOUNTERS, TYPE_STEEL, ABILITY_MAGNET_PULL, &encounterSlot);
+            forcedSlot = TryGetSlotForTypeMatchAbility(firstPartyMon, encounterFieldParams, encounterTable, MAX_WATER_ENCOUNTERS, TYPE_ELECTRIC, ABILITY_STATIC, &encounterSlot);
+
+            if (!forcedSlot) {
+                encounterSlot = GetRodEncounterSlot(fishingRodType);
+            }
+
+            level = GetWildMonLevel(&encounterTable[encounterSlot], encounterFieldParams);
+            break;
+        default:
+            GF_ASSERT(FALSE);
         }
 
-        encounterSlot = TryFindHigherLevelSlot(encounterTable, encounterFieldParams, encounterSlot);
-        level = encounterTable[encounterSlot].maxLevel;
-        break;
-    case ENCOUNTER_TYPE_SURF:
-        // BUG: Magnet Pull doesn't function in water because its encounter slot gets overwritten when the Static check returns FALSE.
-        forcedSlot = TryGetSlotForTypeMatchAbility(firstPartyMon, encounterFieldParams, encounterTable, MAX_WATER_ENCOUNTERS, TYPE_STEEL, ABILITY_MAGNET_PULL, &encounterSlot);
-        forcedSlot = TryGetSlotForTypeMatchAbility(firstPartyMon, encounterFieldParams, encounterTable, MAX_WATER_ENCOUNTERS, TYPE_ELECTRIC, ABILITY_STATIC, &encounterSlot);
+        if (FirstMonAbilityPreventsEncounter(encounterFieldParams, firstPartyMon, level)) {
+            if (wantShiny && requirement != WILD_SHINY_REQ_NONE) {
+                continue; // keep searching for a shiny attempt that isn't blocked
+            }
 
-        if (!forcedSlot) {
-            encounterSlot = GetWaterEncounterSlot();
+            return FALSE;
         }
 
-        level = GetWildMonLevel(&encounterTable[encounterSlot], encounterFieldParams);
-        break;
-    case ENCOUNTER_TYPE_FISHING:
-        // BUG: Magnet Pull doesn't function in water because its encounter slot gets overwritten when the Static check returns FALSE.
-        forcedSlot = TryGetSlotForTypeMatchAbility(firstPartyMon, encounterFieldParams, encounterTable, MAX_WATER_ENCOUNTERS, TYPE_STEEL, ABILITY_MAGNET_PULL, &encounterSlot);
-        forcedSlot = TryGetSlotForTypeMatchAbility(firstPartyMon, encounterFieldParams, encounterTable, MAX_WATER_ENCOUNTERS, TYPE_ELECTRIC, ABILITY_STATIC, &encounterSlot);
+        if (RepelPreventsEncounter(level, encounterFieldParams) == TRUE) {
+            if (wantShiny && requirement != WILD_SHINY_REQ_NONE) {
+                continue;
+            }
 
-        if (!forcedSlot) {
-            encounterSlot = GetRodEncounterSlot(fishingRodType);
+            return FALSE;
         }
 
-        level = GetWildMonLevel(&encounterTable[encounterSlot], encounterFieldParams);
-        break;
-    default:
-        GF_ASSERT(FALSE);
-    }
+        sWildShinyRequirement = requirement;
+        BOOL created = CreateWildMon(encounterTable[encounterSlot].species, level, partyDest, encounterFieldParams, firstPartyMon, battleParams);
+        sWildShinyRequirement = WILD_SHINY_REQ_NONE;
 
-    if (FirstMonAbilityPreventsEncounter(encounterFieldParams, firstPartyMon, level)) {
-        return FALSE;
+        if (created) {
+            return TRUE;
+        }
     }
-
-    if (RepelPreventsEncounter(level, encounterFieldParams) == TRUE) {
-        return FALSE;
-    }
-
-    CreateWildMon(encounterTable[encounterSlot].species, level, partyDest, encounterFieldParams, firstPartyMon, battleParams);
-    return TRUE;
 }
 
 // Forced to be the species of the chain.
@@ -1232,7 +1298,25 @@ void CreateWildMon_Scripted(FieldSystem *fieldSystem, u16 species, u8 level, Fie
     WildEncounters_FieldParams encounterFieldParams;
     InitEncounterFieldParams(fieldSystem, firstPartyMon, NULL, &encounterFieldParams);
 
-    CreateWildMon(species, level, 1, &encounterFieldParams, firstPartyMon, battleParams);
+    // Rolled once up front. If the PID doesn't match, CreateWildMon returns FALSE and we re-roll
+    // nature + PID from scratch, so the accepted mon still has a normal nature -> PID -> IV frame.
+    BOOL wantShiny = (LCRNG_RandMod(WILD_SHINY_ODDS) == 0);
+    int requirement = wantShiny ? WILD_SHINY_REQ_SHINY : WILD_SHINY_REQ_NOT_SHINY;
+
+    for (int attempt = 0;; attempt++) {
+        if (attempt >= WILD_SHINY_MAX_ATTEMPTS) {
+            requirement = WILD_SHINY_REQ_NONE; // safety valve
+        }
+
+        sWildShinyRequirement = requirement;
+        BOOL created = CreateWildMon(species, level, 1, &encounterFieldParams, firstPartyMon, battleParams);
+        sWildShinyRequirement = WILD_SHINY_REQ_NONE;
+
+        if (created) {
+            break;
+        }
+    }
+
     return;
 }
 

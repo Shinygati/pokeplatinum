@@ -1,5 +1,4 @@
 #include "macros/scrcmd.inc"
-#include "generated/distribution_events.h"
 #include "res/text/bank/newmoon_island_forest.h"
 #include "res/field/events/events_newmoon_island_forest.h"
 
@@ -13,8 +12,6 @@ NewmoonIslandForest_OnTransition:
     GetNationalDexEnabled VAR_MAP_LOCAL_0x00
     GoToIfEq VAR_MAP_LOCAL_0x00, FALSE, NewmoonIslandForest_HideDarkrai
     CheckItem ITEM_MEMBER_CARD, 1, VAR_MAP_LOCAL_0x00
-    GoToIfEq VAR_MAP_LOCAL_0x00, FALSE, NewmoonIslandForest_HideDarkrai
-    CheckDistributionEvent DISTRIBUTION_EVENT_DARKRAI, VAR_MAP_LOCAL_0x00
     GoToIfEq VAR_MAP_LOCAL_0x00, FALSE, NewmoonIslandForest_HideDarkrai
     GoToIfSet FLAG_CAUGHT_DARKRAI, NewmoonIslandForest_HideDarkrai
     ClearFlag FLAG_HIDE_NEWMOON_ISLAND_FOREST_DARKRAI

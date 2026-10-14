@@ -24,11 +24,6 @@ CanalaveCityHarborInn_CheckNationalDexEnabled:
 
 CanalaveCityHarborInn_CheckMemberCard:
     CheckItem ITEM_MEMBER_CARD, 1, VAR_MAP_LOCAL_0x00
-    GoToIfEq VAR_MAP_LOCAL_0x00, TRUE, CanalaveCityHarborInn_CheckDistributionEventDarkrai
-    End
-
-CanalaveCityHarborInn_CheckDistributionEventDarkrai:
-    CheckDistributionEvent DISTRIBUTION_EVENT_DARKRAI, VAR_MAP_LOCAL_0x00
     GoToIfEq VAR_MAP_LOCAL_0x00, TRUE, CanalaveCityWestHouse_CheckWokeUpLittleBoy
     End
 
