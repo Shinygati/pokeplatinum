@@ -1,4 +1,4 @@
-# pokeplatinum (modified fork)
+# pokeplatinum
 
 This is a fork of [pret/pokeplatinum](https://github.com/pret/pokeplatinum), the disassembly of Pokémon Platinum. It keeps the original decompilation intact and adds a set of gameplay changes aimed at making a playthrough faster, friendlier, and more rewarding.
 
@@ -39,11 +39,11 @@ All of the Mystery Gift events are activated after beating the Elite Four, so no
 - Darkrai
 - Shaymin
 - Rotom
-- Regigigas / the Regi event
+- Regigigas / the Regi trio
 
 ## Building
 
-Build instructions are unchanged from upstream. See the [pret/pokeplatinum](https://github.com/pret/pokeplatinum) README for setup, dependencies, and how to provide your own ROM.
+Build instructions are unchanged from upstream. See the [pret/pokeplatinum](https://github.com/pret/pokeplatinum) README for setup and dependencies.
 
 ## AI disclosure
 
