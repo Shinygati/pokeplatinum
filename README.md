@@ -36,10 +36,10 @@ All credit for the decompilation goes to the pret contributors. This fork only a
 
 All of the Mystery Gift events are activated after beating the Elite Four, so no distribution is needed. This covers:
 
-- Regigigas / the Regi event
-- Rotom
-- Shaymin
 - Darkrai
+- Shaymin
+- Rotom
+- Regigigas / the Regi event
 
 ## Building
 
