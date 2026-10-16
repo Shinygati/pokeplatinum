@@ -12,6 +12,8 @@
 #include "inlines.h"
 #include "item.h"
 #include "unk_0205DFC4.h"
+#include "constants/items.h"
+#include "special_encounter.h"
 
 BOOL ScrCmd_AddItem(ScriptContext *ctx)
 {
@@ -94,5 +96,43 @@ BOOL ScrCmd_Dummy081(ScriptContext *ctx)
 
 BOOL ScrCmd_Dummy082(ScriptContext *ctx)
 {
+    return FALSE;
+}
+
+
+BOOL ScrCmd_UseStrongestRepel(ScriptContext *ctx)
+{
+    FieldSystem *fieldSystem = ctx->fieldSystem;
+    SaveData *saveData = fieldSystem->saveData;
+    Bag *bag = SaveData_GetBag(saveData);
+    u16 item = ITEM_NONE;
+    u16 *result = ScriptContext_GetVarPointer(ctx);
+    u8 *repelSteps;
+
+    if (Bag_CanRemoveItem(bag, ITEM_MAX_REPEL, 1, HEAP_ID_FIELD1)) {
+        item = ITEM_MAX_REPEL;
+    } else if (Bag_CanRemoveItem(bag, ITEM_SUPER_REPEL, 1, HEAP_ID_FIELD1)) {
+        item = ITEM_SUPER_REPEL;
+    } else if (Bag_CanRemoveItem(bag, ITEM_REPEL, 1, HEAP_ID_FIELD1)) {
+        item = ITEM_REPEL;
+    }
+
+    if (item == ITEM_NONE) {
+        *result = FALSE;
+        return FALSE;
+    }
+
+    if (Bag_TryRemoveItem(bag, item, 1, HEAP_ID_FIELD1) == FALSE) {
+        *result = FALSE;
+        return FALSE;
+    }
+
+    repelSteps = SpecialEncounter_GetRepelSteps(
+        SaveData_GetSpecialEncounters(saveData));
+
+    *repelSteps = (u8)Item_LoadParam(
+        item, ITEM_PARAM_EFFECT_PARAM, HEAP_ID_FIELD1);
+
+    *result = TRUE;
     return FALSE;
 }

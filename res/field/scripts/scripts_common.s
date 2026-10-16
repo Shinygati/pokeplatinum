@@ -1440,15 +1440,6 @@ CommonScript_HatchEgg:
     ReleaseAll
     End
 
-CommonScript_RepelsEffectWoreOff:
-    PlaySE SE_CONFIRM_sseq_3
-    LockAll
-    Message CommonStrings_Text_RepelsEffectWoreOff
-    WaitABPress
-    CloseMessage
-    ReleaseAll
-    End
-
 _139D:
     PlaySE SE_CONFIRM_sseq_3
     LockAll
@@ -1692,6 +1683,25 @@ CommonScript_GriseousOrbCouldNotBeRemoved:
     CloseMessage
     ReleaseAll
     ReturnCommonScript
+    End
+
+CommonScript_RepelsEffectWoreOff:
+    PlaySE SE_CONFIRM_sseq_3
+    LockAll
+    Message CommonStrings_Text_UseAnotherRepel
+    ShowYesNoMenu VAR_RESULT
+    GoToIfEq VAR_RESULT, MENU_NO, CommonScript_RepelRenewFailed
+    UseStrongestRepel VAR_RESULT
+    GoToIfEq VAR_RESULT, FALSE, CommonScript_RepelRenewFailed
+    CloseMessage
+    ReleaseAll
+    End
+
+CommonScript_RepelRenewFailed:
+    Message CommonStrings_Text_RepelsEffectWoreOff
+    WaitABPress
+    CloseMessage
+    ReleaseAll
     End
 
     .balign 4, 0

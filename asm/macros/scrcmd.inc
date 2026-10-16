@@ -4821,6 +4821,17 @@
     .short \result
     .endm
 
+    .macro ResetEVs slot, resultVar
+    .short SCRCMD_RESETEVS
+    .short \slot
+    .short \resultVar
+    .endm
+
+    .macro UseStrongestRepel resultVar
+    .short SCRCMD_USESTRONGESTREPEL
+    .short \resultVar
+    .endm
+
     .macro CheckPartyHasFatefulEncounterRegigigas destVar
     .short SCRCMD_CHECKPARTYHASFATEFULENCOUNTERREGIGIGAS
     .short \destVar

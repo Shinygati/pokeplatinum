@@ -10,8 +10,6 @@ OldChateauBackMiddleWestRoom_TV:
     LockAll
     GoToIfSet FLAG_CAUGHT_OLD_CHATEAU_ROTOM, OldChateauBackMiddleWestRoom_TVHasMalevolentFeel
     GoToIfSet FLAG_DAILY_BATTLED_OLD_CHATEAU_ROTOM, OldChateauBackMiddleWestRoom_TVHasMalevolentFeel
-    GetTimeOfDay VAR_RESULT
-    GoToIfLt VAR_RESULT, TIMEOFDAY_NIGHT, OldChateauBackMiddleWestRoom_TVHasMalevolentFeel
     Message OldChateauBackMiddleWestRoom_Text_WantToThumpTheTV
     ShowYesNoMenu VAR_RESULT
     GoToIfEq VAR_RESULT, MENU_NO, OldChateauBackMiddleWestRoom_End

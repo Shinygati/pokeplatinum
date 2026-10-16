@@ -61,13 +61,7 @@ Route209_UseOddKeystone:
     End
 
 Route209_CheckSpiritombCounter:
-    GetSpiritombCounter VAR_RESULT
-    GoToIfGe VAR_RESULT, 32, Route209_EncounterSpiritomb
-    GoToIfGe VAR_RESULT, 29, Route209_SomeSortOfPresence
-    GoToIfGe VAR_RESULT, 22, Route209_IsThatTowerShaking
-    GoToIfGe VAR_RESULT, 15, Route209_CryingComingFromInside
-    GoToIfGe VAR_RESULT, 8, Route209_StonesAppearToHaveShifted
-    GoTo Route209_BuiltManyYearsAgo
+    GoTo Route209_EncounterSpiritomb
 
 Route209_EncounterSpiritomb:
     WaitSE SE_CONFIRM_sseq_3

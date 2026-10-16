@@ -873,6 +873,10 @@
         "It will be fixed if you enter the\n",
         "Hall of Fame again.\r"
       ]
+    },
+    {
+      "id": "CommonStrings_Text_UseAnotherRepel",
+      "en_US": "Would you like to use another Repel?"
     }
   ]
 }

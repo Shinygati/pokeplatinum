@@ -1044,8 +1044,8 @@ static void CreateWildMonShinyWithGenderOrNature(const u16 species, const u8 lev
     Heap_Free(newEncounter);
 }
 
-#define WILD_SHINY_ODDS         512
-#define WILD_SHINY_MAX_ATTEMPTS 60000
+#define WILD_SHINY_ODDS         4096
+#define WILD_SHINY_MAX_ATTEMPTS 120000
 
 enum {
     WILD_SHINY_REQ_NONE,
@@ -1271,21 +1271,39 @@ void CreateWildMon_HoneyTree(FieldSystem *fieldSystem, FieldBattleDTO *battlePar
     WildEncounters_FieldParams encounterFieldParams;
     InitEncounterFieldParams(fieldSystem, firstPartyMon, NULL, &encounterFieldParams);
 
-    u8 levelVariance = 15 - 5 + 1;
-
-    u8 level = 5 + LCRNG_RandMod(levelVariance);
-
-    if (!encounterFieldParams.isFirstMonEgg && (encounterFieldParams.firstMonAbility == ABILITY_HUSTLE || encounterFieldParams.firstMonAbility == ABILITY_VITAL_SPIRIT || encounterFieldParams.firstMonAbility == ABILITY_PRESSURE)) {
-        if (LCRNG_RandMod(2) == 0) {
-            (void)0;
-        } else {
-            level = 15;
-        }
-    }
-
     HoneyTree_Unslather(fieldSystem);
     battleParams->battleStatusMask |= BATTLE_STATUS_HONEY_TREE;
-    CreateWildMon(species, level, 1, &encounterFieldParams, firstPartyMon, battleParams);
+
+    // Rolled once, before any level/nature calls, same as the other wild paths.
+    BOOL wantShiny = (LCRNG_RandMod(WILD_SHINY_ODDS) == 0);
+    int requirement = wantShiny ? WILD_SHINY_REQ_SHINY : WILD_SHINY_REQ_NOT_SHINY;
+
+    for (int attempt = 0;; attempt++) {
+        if (attempt >= WILD_SHINY_MAX_ATTEMPTS) {
+            requirement = WILD_SHINY_REQ_NONE; // safety valve
+        }
+
+        // Level is re-rolled every attempt so the accepted mon still has an
+        // unbroken level -> nature -> PID -> IV sequence.
+        u8 levelVariance = 15 - 5 + 1;
+        u8 level = 5 + LCRNG_RandMod(levelVariance);
+
+        if (!encounterFieldParams.isFirstMonEgg && (encounterFieldParams.firstMonAbility == ABILITY_HUSTLE || encounterFieldParams.firstMonAbility == ABILITY_VITAL_SPIRIT || encounterFieldParams.firstMonAbility == ABILITY_PRESSURE)) {
+            if (LCRNG_RandMod(2) == 0) {
+                (void)0;
+            } else {
+                level = 15;
+            }
+        }
+
+        sWildShinyRequirement = requirement;
+        BOOL created = CreateWildMon(species, level, 1, &encounterFieldParams, firstPartyMon, battleParams);
+        sWildShinyRequirement = WILD_SHINY_REQ_NONE;
+
+        if (created) {
+            break;
+        }
+    }
 
     return;
 }

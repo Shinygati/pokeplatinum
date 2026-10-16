@@ -1378,13 +1378,20 @@ static void GiveAllEventGifts(FieldSystem *fieldSystem)
     Bag *bag = SaveData_GetBag(fieldSystem->saveData);
     VarsFlags *varsFlags = SaveData_GetVarsFlags(fieldSystem->saveData);
 
-    Bag_TryAddItem(bag, ITEM_MEMBER_CARD, 1, HEAP_ID_FIELD3);
-    Bag_TryAddItem(bag, ITEM_OAKS_LETTER, 1, HEAP_ID_FIELD3);
-    Bag_TryAddItem(bag, ITEM_SECRET_KEY, 1, HEAP_ID_FIELD3);
+    if (!Bag_CanRemoveItem(bag, ITEM_MEMBER_CARD, 1, HEAP_ID_FIELD3)) {
+        Bag_TryAddItem(bag, ITEM_MEMBER_CARD, 1, HEAP_ID_FIELD3);
+		SystemVars_SetDistributionEventMagic(varsFlags, DISTRIBUTION_EVENT_DARKRAI);
+    }
 
-    SystemVars_SetDistributionEventMagic(varsFlags, DISTRIBUTION_EVENT_DARKRAI);
-    SystemVars_SetDistributionEventMagic(varsFlags, DISTRIBUTION_EVENT_SHAYMIN);
-    SystemVars_SetDistributionEventMagic(varsFlags, DISTRIBUTION_EVENT_ROTOM);
+    if (!Bag_CanRemoveItem(bag, ITEM_OAKS_LETTER, 1, HEAP_ID_FIELD3)) {
+        Bag_TryAddItem(bag, ITEM_OAKS_LETTER, 1, HEAP_ID_FIELD3);
+		SystemVars_SetDistributionEventMagic(varsFlags, DISTRIBUTION_EVENT_SHAYMIN);
+    }
+
+    if (!Bag_CanRemoveItem(bag, ITEM_SECRET_KEY, 1, HEAP_ID_FIELD3)) {
+        Bag_TryAddItem(bag, ITEM_SECRET_KEY, 1, HEAP_ID_FIELD3);
+		SystemVars_SetDistributionEventMagic(varsFlags, DISTRIBUTION_EVENT_ROTOM);
+    }
 }
 
 void FieldTask_StartHallOfFame(FieldSystem *fieldSystem, HallOfFameDisplayData *displayData)

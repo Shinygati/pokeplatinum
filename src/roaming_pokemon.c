@@ -238,6 +238,18 @@ void RoamingPokemon_UpdatePlayerRecentRoutes(SpecialEncounter *speEnc, const int
     }
 }
 
+#define ROAMER_SHINY_ODDS         100 // keep in sync with WILD_SHINY_ODDS in wild_encounters.c
+#define ROAMER_SHINY_MAX_ATTEMPTS 120000
+
+// Same two LCRNG calls (low half first) the game uses for a non-fixed PID.
+static u32 RollRoamerPersonality(void)
+{
+    u32 low = LCRNG_Next() & 0xFFFF;
+    u32 high = LCRNG_Next() & 0xFFFF;
+
+    return low | (high << 16);
+}
+
 void RoamingPokemon_ActivateSlot(SaveData *saveData, const u8 slot)
 {
     Pokemon *roamerMonData;
@@ -286,9 +298,32 @@ void RoamingPokemon_ActivateSlot(SaveData *saveData, const u8 slot)
 
     trainer = SaveData_GetTrainerInfo(saveData);
     roamerMonData = Pokemon_New(HEAP_ID_FIELD1);
-
     Pokemon_Init(roamerMonData);
-    Pokemon_InitWith(roamerMonData, species, level, INIT_IVS_RANDOM, FALSE, 0, OTID_SET, TrainerInfo_ID_LowHalf(trainer));
+
+    // Shininess is judged against the full TID/SID, because that is the OT ID
+    // AddRoamerToEnemyParty stamps on the mon at encounter time.
+    u32 fullTrainerID = TrainerInfo_ID(trainer);
+
+    // Rolled once, before any PID calls. Rejected PIDs are thrown away without
+    // generating IVs, so the accepted mon is PID (2 calls) -> IVs (next calls), unbroken.
+    BOOL wantShiny = (LCRNG_RandMod(ROAMER_SHINY_ODDS) == 0);
+    u32 personality;
+
+    for (int attempt = 0;; attempt++) {
+        personality = RollRoamerPersonality();
+
+        if (attempt >= ROAMER_SHINY_MAX_ATTEMPTS) {
+            break; // safety valve, accept whatever comes
+        }
+
+        BOOL isShiny = Pokemon_IsPersonalityShiny(fullTrainerID, personality) != 0;
+
+        if (isShiny == wantShiny) {
+            break;
+        }
+    }
+
+    Pokemon_InitWith(roamerMonData, species, level, INIT_IVS_RANDOM, TRUE, personality, OTID_SET, TrainerInfo_ID_LowHalf(trainer));
     Roamer_SetData(newRoamer, ROAMER_DATA_STATUS, 0);
     Roamer_SetData(newRoamer, ROAMER_DATA_ACTIVE, 1);
     Roamer_SetData(newRoamer, ROAMER_DATA_IVS, Pokemon_GetValue(roamerMonData, MON_DATA_COMBINED_IVS, NULL));

@@ -1752,7 +1752,7 @@ static void sub_0207FFC8(PartyMenuApplication *application)
     u8 v1;
 
     Window_EraseMessageBox(&application->windows[32], 1);
-    v0 = Heap_Alloc(HEAP_ID_PARTY_MENU, 8);
+    v0 = Heap_Alloc(HEAP_ID_PARTY_MENU, 10);
 
     switch (application->partyMenu->mode) {
     case PARTY_MENU_MODE_FIELD:
@@ -1794,6 +1794,7 @@ static u8 GetContextMenuEntriesForPartyMon(PartyMenuApplication *application, u8
     u16 move;
     u8 fieldMoveIndex = 0, i, count = 0, fieldEffect;
     BOOL hasFly = FALSE;
+	BOOL hasDefog = FALSE;
 
     menuEntriesBuffer[count] = 1;
     count++;
@@ -1810,6 +1811,10 @@ static u8 GetContextMenuEntriesForPartyMon(PartyMenuApplication *application, u8
                 if (move == MOVE_FLY) {
                     hasFly = TRUE;
                 }
+				
+				if (move == MOVE_DEFOG) {
+					hasDefog = TRUE;
+				}
 
                 fieldEffect = GetFieldMoveIndex(move);
 
@@ -1829,6 +1834,16 @@ static u8 GetContextMenuEntriesForPartyMon(PartyMenuApplication *application, u8
 				count++;
 				PartyMenu_SetKnownFieldMove(application, MOVE_FLY, fieldMoveIndex);
 				fieldMoveIndex++;
+			}
+			
+			if (hasDefog == FALSE
+				&& ((Pokemon_GetValue(mon, MON_DATA_TYPE_1, NULL) == TYPE_FLYING)
+				|| (Pokemon_GetValue(mon, MON_DATA_TYPE_2, NULL) == TYPE_FLYING))) {
+				fieldEffect = GetFieldMoveIndex(MOVE_DEFOG);
+				menuEntriesBuffer[count] = fieldEffect;
+				count++;
+				PartyMenu_SetKnownFieldMove(application, MOVE_DEFOG, fieldMoveIndex);
+				fieldMoveIndex++;	
 			}
 
             menuEntriesBuffer[count] = 0;

@@ -75,6 +75,9 @@
 
 #include "res/battle/scripts/sub_seq.naix"
 #include "res/text/bank/battle_strings.h"
+#include "savedata.h"
+#include "system_flags.h"
+#include "vars_flags.h"
 
 typedef BOOL (*BtlCmd)(BattleSystem *, BattleContext *);
 
@@ -9763,8 +9766,12 @@ static void BattleScript_GetExpTask(SysTask *task, void *inData)
                 msg.id = BattleStrings_Text_PokemonGainedABoostedExpPoints; // "{0} gained a boosted {1} Exp. Points!"
             }
 
-            totalExp *= 2; // x2 EXP
-
+			if (SystemFlag_CheckGameCompleted(SaveData_GetVarsFlags(SaveData_Ptr()))) {
+				totalExp *= 2;                  // 2.0x after completing the game
+			} else {
+				totalExp = totalExp * 12 / 10;  // 1.2x by default
+			}
+			
             u32 newExp = Pokemon_GetValue(mon, MON_DATA_EXPERIENCE, NULL);
             data->tmpData[GET_EXP_NEW_EXP] = newExp - Pokemon_GetCurrentLevelBaseExp(mon);
             newExp += totalExp;
@@ -9784,7 +9791,21 @@ static void BattleScript_GetExpTask(SysTask *task, void *inData)
             msg.tags = TAG_NICKNAME_NUM;
             msg.params[0] = expBattler | (slot << 8);
             msg.params[1] = totalExp;
-            data->tmpData[GET_EXP_MSG_INDEX] = BattleMessage_Print(data->battleSys, msgLoader, &msg, BattleSystem_GetTextSpeed(data->battleSys));
+			if (slot == data->battleCtx->selectedPartySlot[expBattler]
+                || !BattleSystem_PokemonIsOT(data->battleSys, mon)) {
+                data->tmpData[GET_EXP_MSG_INDEX] = BattleMessage_Print(data->battleSys, msgLoader, &msg, BattleSystem_GetTextSpeed(data->battleSys));
+            } else if (!data->battleCtx->partyReceivedEXPTextDone) {
+                msg.id = BattleStrings_Text_PartyGainedExpPoints;
+                data->tmpData[GET_EXP_MSG_INDEX] = BattleMessage_Print(data->battleSys, msgLoader, &msg, BattleSystem_GetTextSpeed(data->battleSys));
+                data->battleCtx->partyReceivedEXPTextDone = TRUE;
+            } else {
+                // 1. active battler slot has already received the "gained exp" message
+                // 1.1. this slot is not the active battler slot
+                // 1.2. This slot doesn't get boosted exp and doesn't needs the message shown explicitly for it
+                // 2. The "party gained exp" message has already been shown
+                data->seqNum = SEQ_GET_EXP_CHECK_LEVEL_UP;
+                break;
+            }
             data->tmpData[GET_EXP_MSG_DELAY] = 30 / 4;
             data->seqNum++;
         } else {
@@ -10986,6 +11007,12 @@ static int BattleScript_CalcCatchShakes(BattleSystem *battleSys, BattleContext *
 
     if (battleCtx->battleMons[battleCtx->defender].status & (MON_CONDITION_POISON | MON_CONDITION_BURN | MON_CONDITION_PARALYSIS | MON_CONDITION_TOXIC)) {
         catchRate = catchRate * 15 / 10;
+    }
+
+    catchRate *= 3;
+
+    if (catchRate > 255) {
+        catchRate = 255;
     }
 
     int shakes;

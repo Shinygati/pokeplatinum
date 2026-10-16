@@ -488,6 +488,7 @@ static BOOL FieldMoves_StrengthTask(FieldTask *param0)
     return 0;
 }
 
+
 static enum FieldMoveError FieldMoves_CheckDefog(const FieldMoveContext *fieldMoveContext)
 {
     if (PlayerOutsideLinkRoom(fieldMoveContext) == FALSE) {
@@ -498,12 +499,13 @@ static enum FieldMoveError FieldMoves_CheckDefog(const FieldMoveContext *fieldMo
         return FIELD_MOVE_ERROR_BADGE;
     }
 
-    if (FieldMoves_IsMoveUsable(fieldMoveContext, FIELD_MOVE_DEFOG)) {
-        return FIELD_MOVE_ERROR_NONE;
+    if (FieldMoves_IsMoveUsable(fieldMoveContext, FIELD_MOVE_DEFOG) == FALSE) {
+        return FIELD_MOVE_ERROR_LOCATION;
     }
 
-    return FIELD_MOVE_ERROR_LOCATION;
+    return FIELD_MOVE_ERROR_NONE;
 }
+
 
 static void FieldMoves_SetDefogTask(FieldMovePokemon *fieldMoveMon, const FieldMoveContext *fieldMoveContext)
 {

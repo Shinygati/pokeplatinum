@@ -29,6 +29,49 @@
         "That’s why you should check out the\n",
         "Global Terminal in Jubilife City."
       ]
+    },
+    {
+      "id": "pl_msg_00000197_BasePointsFanatic_Intro",
+      "en_US": [
+        "I’m a base points fanatic!\n",
+        "Do you have a Pokémon that needs\f",
+        "it’s base points reset?"
+      ]
+    },
+    {
+      "id": "pl_msg_00000197_BasePointsFanatic_Declined",
+      "en_US": [
+        "Talk to me if you have a Pokémon\n",
+        "that needs it’s base points reset."
+      ]
+    },
+    {
+      "id": "pl_msg_00000197_BasePointsFanatic_AskSelectPokemon",
+      "en_US": [
+        "Excellent! which Pokémon?"
+      ]
+    },
+    {
+      "id": "pl_msg_00000197_BasePointsFanatic_Confirm",
+      "en_US": [
+        "Are you sure you want me to\n",
+        "take {STRVAR_1 3, 0, 0}’s base points?"
+      ]
+    },
+    {
+      "id": "pl_msg_00000197_BasePointsFanatic_Finished",
+      "en_US": [
+        "Bam! Your {STRVAR_1 3, 0, 0}’s base points\n",
+        "has been removed!"
+      ]
+    },
+    {
+      "id": "pl_msg_00000197_BasePointsFanatic_ZeroEvs",
+      "en_US": [
+        "What are you playing at?\n",
+        "This Pokémon doesn’t even have\f",
+        "any base points for me to take!"
+      ]
     }
   ]
 }

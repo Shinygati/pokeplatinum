@@ -8488,6 +8488,13 @@
         "The Distortion World’s {STRVAR_1 1, 0, 0}\n",
         "appeared!\r"
       ]
+    },
+    {
+      "id": "BattleStrings_Text_PartyGainedExpPoints",
+      "en_US": [
+        "Your party gained\n",
+        "{STRVAR_1 54, 1, 0} Exp. Points!\r"
+      ]
     }
   ]
 }

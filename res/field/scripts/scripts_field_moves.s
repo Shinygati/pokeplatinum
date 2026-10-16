@@ -43,8 +43,6 @@ FieldMoves_UseCutFromField:
     GetFirstNonEggInParty VAR_RESULT
     SetVar VAR_0x8004, VAR_RESULT
     BufferPartyMonNickname 0, VAR_RESULT
-    Message FieldMoves_Text_PokemonUsedCut
-    CloseMessage
     PlayHMCutIn VAR_0x8004
     StartDestroyObstacleAnimation 0, VAR_0x8005
     WaitTime 7, VAR_RESULT
@@ -140,6 +138,8 @@ FieldMoves_CantUseRockSmash:
     End
 
 FieldMoves_UseRockSmashFromField:
+    BufferPartyMonNickname 0, VAR_0x8004
+    PlayHMCutIn VAR_0x8004
     StartDestroyObstacleAnimation 1, VAR_0x8005
     WaitTime 10, VAR_RESULT
     RemoveObject VAR_LAST_TALKED
