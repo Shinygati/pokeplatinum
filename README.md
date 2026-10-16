@@ -4,8 +4,6 @@ This is a fork of [pret/pokeplatinum](https://github.com/pret/pokeplatinum), the
 
 All credit for the decompilation goes to the pret contributors. This fork only adds the changes listed below.
 
-> **Note:** This repository does not contain any game assets. You need to supply your own legally obtained copy of the ROM to build, as described in the upstream project.
-
 ## Changes
 
 ### Shiny hunting
