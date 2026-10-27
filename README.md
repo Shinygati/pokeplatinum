@@ -16,14 +16,21 @@ All credit for the decompilation goes to the pret contributors. This fork only a
 
 **Legality:** the shiny odds changes are built to stay legal. Pokémon are still generated the same way the game normally does it (nature, then PID, then IVs from the following RNG calls), so shiny Pokémon from this fork pass legality checks such as PKHeX and can be moved to Pokémon Bank / HOME without being flagged.
 
-### Quality of life
+### Breeding
 
 | Change | Details |
 | --- | --- |
 | Egg steps | Both **egg creation** and **egg hatching** step requirements are cut in half. |
+| Egg IVs | Breeding eggs **guarantee a minimum of 15 IVs in every stat**. |
+
+### Quality of life
+
+| Change | Details |
+| --- | --- |
 | HM moves | **No Pokémon needs to know an HM move** to use it in the field. Only the matching badge is required. |
 | Repel | When a Repel runs out, the game **prompts you to use another one**. |
 | Poké Radar | **More lenient chain continuation rates**, so chains are easier to keep going. |
+| Great Marsh | The Safari Game starts you with **50 Safari Balls and 1500 steps**. |
 
 ### Experience
 
