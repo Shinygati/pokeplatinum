@@ -456,11 +456,16 @@ static void ov5_021F3244(OverworldAnimManager *param0, void *param1)
     switch (v1->unk_00) {
     case 0:
         if (Billboard_AdvanceAnim(v1->unk_24, FX32_ONE) == 1) {
-            v1->unk_04 = 1;
+            v1->unk_04 = 1; // first play-through done: the Poke Radar task stops waiting on this patch
             v1->unk_00++;
         }
         break;
     case 1:
+        // Shiny patches (type 2) keep replaying their sparkle for as long as the patch exists, so a
+        // shiny patch stays easy to spot after the other patches have settled.
+        if (v1->unk_0C == 2 && Billboard_AdvanceAnim(v1->unk_24, FX32_ONE) == 1) {
+            Billboard_SetAnimFrameNum(v1->unk_24, 0);
+        }
         break;
     }
 }

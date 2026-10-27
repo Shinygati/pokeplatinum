@@ -285,6 +285,7 @@ Static main
 	Object src/unk_02073700.c
 	Object src/simple3d.c
 	Object src/pokemon.c
+	Object src/legal_shiny.c
 	Object src/move_table.c
 	Object src/trainer_data.c
 	Object src/pc_boxes.c

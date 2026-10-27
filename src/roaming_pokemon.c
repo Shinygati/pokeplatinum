@@ -4,12 +4,15 @@
 #include <string.h>
 
 #include "constants/species.h"
+#include "generated/abilities.h"
 #include "generated/map_headers.h"
 
 #include "struct_defs/special_encounter.h"
 
 #include "heap.h"
 #include "inlines.h"
+#include "legal_shiny.h"
+#include "party.h"
 #include "pokemon.h"
 #include "save_player.h"
 #include "savedata.h"
@@ -238,16 +241,17 @@ void RoamingPokemon_UpdatePlayerRecentRoutes(SpecialEncounter *speEnc, const int
     }
 }
 
-#define ROAMER_SHINY_ODDS         100 // keep in sync with WILD_SHINY_ODDS in wild_encounters.c
-#define ROAMER_SHINY_MAX_ATTEMPTS 120000
-
-// Same two LCRNG calls (low half first) the game uses for a non-fixed PID.
-static u32 RollRoamerPersonality(void)
+// Synchronize on the party lead when a roamer is released sets its nature (100%, like wild
+// encounters). Roamers are Method 1 in PKHeX, so only PID -> IVs need to be consecutive.
+static int GetRoamerSyncNature(SaveData *saveData)
 {
-    u32 low = LCRNG_Next() & 0xFFFF;
-    u32 high = LCRNG_Next() & 0xFFFF;
+    Pokemon *lead = Party_GetPokemonBySlotIndex(SaveData_GetParty(saveData), 0);
 
-    return low | (high << 16);
+    if (lead != NULL && Pokemon_GetValue(lead, MON_DATA_IS_EGG, NULL) == FALSE && Pokemon_GetValue(lead, MON_DATA_ABILITY, NULL) == ABILITY_SYNCHRONIZE) {
+        return Pokemon_GetNature(lead);
+    }
+
+    return LEGAL_SHINY_NATURE_ANY;
 }
 
 void RoamingPokemon_ActivateSlot(SaveData *saveData, const u8 slot)
@@ -303,27 +307,16 @@ void RoamingPokemon_ActivateSlot(SaveData *saveData, const u8 slot)
     // Shininess is judged against the full TID/SID, because that is the OT ID
     // AddRoamerToEnemyParty stamps on the mon at encounter time.
     u32 fullTrainerID = TrainerInfo_ID(trainer);
+    int nature = GetRoamerSyncNature(saveData);
+    LegalFrame frame;
 
-    // Rolled once, before any PID calls. Rejected PIDs are thrown away without
-    // generating IVs, so the accepted mon is PID (2 calls) -> IVs (next calls), unbroken.
-    BOOL wantShiny = (LCRNG_RandMod(ROAMER_SHINY_ODDS) == 0);
-    u32 personality;
-
-    for (int attempt = 0;; attempt++) {
-        personality = RollRoamerPersonality();
-
-        if (attempt >= ROAMER_SHINY_MAX_ATTEMPTS) {
-            break; // safety valve, accept whatever comes
-        }
-
-        BOOL isShiny = Pokemon_IsPersonalityShiny(fullTrainerID, personality) != 0;
-
-        if (isShiny == wantShiny) {
-            break;
-        }
+    if (!LegalShiny_Roll(SHINY_ODDS_ROAMER) || !LegalShiny_FindShinyFrame(NULL, fullTrainerID, nature, FALSE, &frame)) {
+        LegalShiny_RollNormalMethod1(fullTrainerID, nature, &frame);
     }
 
-    Pokemon_InitWith(roamerMonData, species, level, INIT_IVS_RANDOM, TRUE, personality, OTID_SET, TrainerInfo_ID_LowHalf(trainer));
+    // The two LCRNG calls for the IVs inside Pokemon_InitWith come straight after the PID.
+    LegalShiny_ApplyFrame(&frame);
+    Pokemon_InitWith(roamerMonData, species, level, INIT_IVS_RANDOM, TRUE, frame.personality, OTID_SET, fullTrainerID);
     Roamer_SetData(newRoamer, ROAMER_DATA_STATUS, 0);
     Roamer_SetData(newRoamer, ROAMER_DATA_ACTIVE, 1);
     Roamer_SetData(newRoamer, ROAMER_DATA_IVS, Pokemon_GetValue(roamerMonData, MON_DATA_COMBINED_IVS, NULL));

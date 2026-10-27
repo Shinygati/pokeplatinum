@@ -19,6 +19,7 @@
 #include "game_records.h"
 #include "heap.h"
 #include "item.h"
+#include "legal_shiny.h"
 #include "math_util.h"
 #include "message.h"
 #include "message_util.h"
@@ -672,7 +673,12 @@ void Egg_CreateEgg(Pokemon *egg, u16 species, u8 param2, TrainerInfo *trainerInf
     u8 hatchCycles = SpeciesData_GetSpeciesValue(species, SPECIES_DATA_HATCH_CYCLES);
     String *eggName;
 
-    Pokemon_InitWith(egg, species, 1, INIT_IVS_RANDOM, FALSE, 0, OTID_NOT_SET, 0);
+    if (species == SPECIES_MANAPHY) {
+        // Manaphy (Ranger) egg keeps vanilla generation; it is never shiny for its original OT.
+        Pokemon_InitWith(egg, species, 1, INIT_IVS_RANDOM, FALSE, 0, OTID_NOT_SET, 0);
+    } else {
+        Pokemon_InitGiftWithLegalShinyOdds(egg, species, 1, TrainerInfo_ID(trainerInfo), SHINY_ODDS_GIFT);
+    }
 
     metLvl = 0;
     ball = ITEM_POKE_BALL;
@@ -706,6 +712,29 @@ void Egg_CreateEgg(Pokemon *egg, u16 species, u8 param2, TrainerInfo *trainerInf
     UpdateMonStatusAndTrainerInfo(egg, trainerInfo, param4, metLocation, HEAP_ID_SYSTEM);
 }
 
+// Shiny eggs get at least two perfect IVs, like shiny encounters. Egg IVs aren't RNG-correlated.
+static void Egg_GiveShinyPerfectIVs(Pokemon *mon)
+{
+    u8 perfect = 31;
+    int count = 0;
+    int i;
+
+    for (i = 0; i < STAT_MAX; i++) {
+        if (Pokemon_GetValue(mon, MON_DATA_HP_IV + i, NULL) == 31) {
+            count++;
+        }
+    }
+
+    while (count < 2) {
+        i = LCRNG_Next() % STAT_MAX;
+
+        if (Pokemon_GetValue(mon, MON_DATA_HP_IV + i, NULL) != 31) {
+            Pokemon_SetValue(mon, MON_DATA_HP_IV + i, &perfect);
+            count++;
+        }
+    }
+}
+
 static void Egg_SetInitialData(Pokemon *mon, u16 species, Daycare *daycare, u32 monOTID, u8 form)
 {
     u8 level;
@@ -715,18 +744,11 @@ static void Egg_SetInitialData(Pokemon *mon, u16 species, Daycare *daycare, u32 
     u8 hatchCycles = SpeciesData_GetSpeciesValue(species, SPECIES_DATA_HATCH_CYCLES);
 
     personality = Daycare_GetOffspringPersonality(daycare);
-	
-        if (Pokemon_IsPersonalityShiny(monOTID, personality) == FALSE) {
-			int i;
-			
-            for (i = 0; i < 16; i++) {
-                personality = ARNG_Next(personality);
 
-                if (Pokemon_IsPersonalityShiny(monOTID, personality)) {
-                    break;
-                }
-            }
-        }
+    // Flat 1/SHINY_ODDS_EGG, regardless of the parents' languages (no Masuda bonus, no natural
+    // 1/8192 on top). Gen 4 eggs have no PID/IV correlation, so the PID is adjusted in place while
+    // keeping its nature (Everstone), gender, ability and the Nidoran/Volbeat gender bit.
+    personality = LegalShiny_AdjustEggPersonality(personality, monOTID, LegalShiny_Roll(SHINY_ODDS_EGG));
 
     Pokemon_InitWith(mon, species, EGG_POKEMON_LEVEL, INIT_IVS_RANDOM, TRUE, personality, OTID_NOT_SET, 0);
 
@@ -773,6 +795,10 @@ void Daycare_GiveEggFromDaycare(Daycare *daycare, Party *party, TrainerInfo *tra
 		}
 	}
 	
+    if (LegalShiny_IsShiny(monOTID, Pokemon_GetValue(mon, MON_DATA_PERSONALITY, NULL))) {
+        Egg_GiveShinyPerfectIVs(mon);
+    }
+
     Egg_BuildMoveset(mon, Daycare_GetBoxMon(daycare, parentSlots[1]), Daycare_GetBoxMon(daycare, parentSlots[0]));
 
     UpdateMonStatusAndTrainerInfo(mon, trainerInfo, 3, SpecialMetLoc_GetId(1, 0), HEAP_ID_FIELD1);

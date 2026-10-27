@@ -475,7 +475,7 @@ static BOOL CheckPatchShiny(const int chainCount)
         return FALSE;
     }
 
-    int rate = 8100 - (chainCount * 200);
+    int rate = 1; //- (chainCount * 200);
     if (rate < 64) {
         rate = 64;
     }

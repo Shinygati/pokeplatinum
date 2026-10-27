@@ -11,6 +11,7 @@
 #include "overlay005/daycare.h"
 
 #include "heap.h"
+#include "legal_shiny.h"
 #include "party.h"
 #include "pokemon.h"
 #include "save_catchrecords.h"
@@ -41,7 +42,7 @@ BOOL Pokemon_GiveMonFromScript(enum HeapID heapID, SaveData *saveData, u16 speci
     mon = Pokemon_New(heapID);
 
     Pokemon_Init(mon);
-    Pokemon_InitWith(mon, species, level, INIT_IVS_RANDOM, FALSE, 0, OTID_NOT_SET, 0);
+    Pokemon_InitGiftWithLegalShinyOdds(mon, species, level, TrainerInfo_ID(trainerInfo), SHINY_ODDS_GIFT);
     Pokemon_SetCatchData(mon, trainerInfo, ITEM_POKE_BALL, metLocation, metTerrain, heapID);
 
     item = heldItem;
