@@ -38,6 +38,7 @@
 #include "pokemon_sprite.h"
 #include "render_window.h"
 #include "ribbon.h"
+#include "save_player.h"
 #include "savedata.h"
 #include "screen_fade.h"
 #include "sound.h"
@@ -51,6 +52,7 @@
 #include "system_flags.h"
 #include "touch_pad.h"
 #include "trainer_info.h"
+#include "unk_02017038.h"
 #include "unk_0208C098.h"
 #include "unk_02094EDC.h"
 #include "vars_flags.h"
@@ -1151,6 +1153,27 @@ static void SetMonDataFromMon(PokemonSummaryScreen *summaryScreen, Pokemon *mon,
         monData->isShiny = TRUE;
     } else {
         monData->isShiny = FALSE;
+    }
+
+    // Fork: Eggs show the shiny star when they will hatch shiny for the player. A Gen 4 egg is
+    // judged against whoever hatches it, so use the player's IDs rather than the egg's OT.
+    if (monData->isEgg) {
+        SaveData *saveData = SaveData_PtrOrNull();
+
+        if (saveData != NULL) {
+            u32 playerID = TrainerInfo_ID(SaveData_GetTrainerInfo(saveData));
+            u32 personality = Pokemon_GetValue(mon, MON_DATA_PERSONALITY, NULL);
+
+            monData->isShiny = Pokemon_IsPersonalityShiny(playerID, personality);
+
+            // A Ranger Manaphy Egg hatched by the trainer who received it is re-rolled to
+            // non-shiny on hatch (vanilla behaviour), so don't promise a star for it.
+            if (monData->species == SPECIES_MANAPHY
+                && Pokemon_GetValue(mon, MON_DATA_EGG_LOCATION, NULL) == SpecialMetLoc_GetId(2, 1)
+                && Pokemon_GetValue(mon, MON_DATA_OT_ID, NULL) == playerID) {
+                monData->isShiny = FALSE;
+            }
+        }
     }
 
     monData->ribbons[0] = 0;

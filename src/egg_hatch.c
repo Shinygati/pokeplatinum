@@ -172,28 +172,16 @@ static BOOL EggHatch_Exit(ApplicationManager *appMan, int *state)
     return TRUE;
 }
 
-// OT ID the egg had before hatching (the hatch animation temporarily shows the hatcher's).
-static u32 sEggOriginalOTID;
-
 static BOOL FieldTask_HatchEgg(FieldTask *fieldTask)
 {
     EggHatchApp *app = FieldTask_GetEnv(fieldTask);
 
     switch (app->state) {
-    case 0: {
-        FieldSystem *fieldSystem = FieldTask_GetFieldSystem(fieldTask);
-        u32 hatcherID = TrainerInfo_ID(SaveData_GetTrainerInfo(FieldSystem_GetSaveData(fieldSystem)));
-
-        sEggOriginalOTID = Pokemon_GetValue(app->args.mon, MON_DATA_OT_ID, NULL);
-        Egg_CreateHatchedMonForHatcher(app->args.mon, hatcherID, HEAP_ID_FIELD2);
-
-        // A traded egg's PID is now judged against the hatcher; show the hatch animation that way
-        // too. The original OT ID goes back before UpdateMonStatusAndTrainerInfo detects the trade.
-        Pokemon_SetValue(app->args.mon, MON_DATA_OT_ID, &hatcherID);
-
+    case 0:
+        Egg_CreateHatchedMon(app->args.mon, HEAP_ID_FIELD2);
         FieldTransition_FinishMap(fieldTask);
         app->state++;
-    } break;
+        break;
     case 1:
         FieldTask_RunApplication(fieldTask, &sEggHatchAppTemplate, app);
         app->state++;
@@ -207,7 +195,6 @@ static BOOL FieldTask_HatchEgg(FieldTask *fieldTask)
         int isEgg = FALSE;
 
         Pokemon_SetValue(mon, MON_DATA_IS_EGG, &isEgg);
-        Pokemon_SetValue(mon, MON_DATA_OT_ID, &sEggOriginalOTID);
         UpdateMonStatusAndTrainerInfo(mon, trainerInfo, 6, location, HEAP_ID_FIELD2);
         Pokemon_SetValue(mon, MON_DATA_SPECIES_NAME, NULL);
 

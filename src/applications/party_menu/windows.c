@@ -750,6 +750,7 @@ void PartyMenu_LoadContextMenuStrings(PartyMenuApplication *application)
     LoadMenuString(PartyMenu_Text_Enter, PARTY_MENU_STR_ENTER_2);
     LoadMenuString(PartyMenu_Text_Set, PARTY_MENU_STR_SET);
     LoadMenuString(PartyMenu_Text_ContextConfirm, PARTY_MENU_STR_CONFIRM);
+    LoadMenuString(PartyMenu_Text_EVs, PARTY_MENU_STR_EVS);
 
 #undef LoadMenuString
 }
@@ -1433,4 +1434,41 @@ void PartyMenu_RemoveContextWindow(PartyMenuApplication *application)
 {
     Window_EraseStandardFrame(&application->menuWindows[0], 0);
     Window_Remove(&application->menuWindows[0]);
+}
+
+// EV editor window. Rows use the same stat names as the level-up window (HP, ATTACK, DEFENSE, SP. ATK, SP. DEF, SPEED).
+void PartyMenu_DrawEVEditor(PartyMenuApplication *application, BOOL addWindow)
+{
+    Window *window = &application->menuWindows[0];
+
+    if (addWindow == TRUE) {
+        Window_Add(application->bgConfig, window, BG_LAYER_MAIN_0, 1, 1, 14, 12, 0, WIN_CONTEXT_WINDOW_BASE_TILE);
+        Window_DrawStandardFrame(window, TRUE, 1, 14);
+    }
+
+    Window_FillTilemap(window, 15);
+
+    for (u32 stat = 0; stat < STAT_MAX; stat++) {
+        String *string;
+
+        if (stat == application->evEditSelection) {
+            string = MessageLoader_GetNewString(application->messageLoader, PartyMenu_Text_EVCursor);
+            Text_AddPrinterWithParams(window, FONT_SYSTEM, string, 0, MAX_LETTER_HEIGHT * stat, TEXT_SPEED_NO_TRANSFER, NULL);
+            String_Free(string);
+        }
+
+        string = MessageLoader_GetNewString(application->messageLoader, PartyMenu_Text_LevelUpMaxHP + stat);
+        Text_AddPrinterWithParams(window, FONT_SYSTEM, string, 12, MAX_LETTER_HEIGHT * stat, TEXT_SPEED_NO_TRANSFER, NULL);
+        String_Free(string);
+
+        string = MessageLoader_GetNewString(application->messageLoader, PartyMenu_Text_LevelUpNewStatValue);
+        StringTemplate_SetNumber(application->template, 0, application->evEditValues[stat], 3, PADDING_MODE_NONE, CHARSET_MODE_EN);
+        StringTemplate_Format(application->template, application->tmpString, string);
+        String_Free(string);
+
+        u32 width = Font_CalcStringWidth(FONT_SYSTEM, application->tmpString, 0);
+        Text_AddPrinterWithParams(window, FONT_SYSTEM, application->tmpString, 13 * 8 - width, MAX_LETTER_HEIGHT * stat, TEXT_SPEED_NO_TRANSFER, NULL);
+    }
+
+    Window_ScheduleCopyToVRAM(window);
 }

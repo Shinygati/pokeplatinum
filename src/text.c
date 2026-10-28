@@ -8,6 +8,7 @@
 
 #include "bg_window.h"
 #include "font.h"
+#include "game_options.h"
 #include "graphics.h"
 #include "heap.h"
 #include "render_text.h"
@@ -194,6 +195,11 @@ u8 Text_AddPrinter(const TextPrinterTemplate *template, u32 renderDelay, TextPri
     sPausePrinter = FALSE;
     Text_ZeroPrinterIconGfx(printer);
 
+    // Player-selected text speed resolves to TEXT_SPEED_FAST; with INST chosen,
+    // keep the normal task-based printer (so waits/scroll prompts still work)
+    // but draw every glyph up to the next wait in a single frame.
+    printer->instant = (renderDelay == TEXT_SPEED_FAST && Options_IsInstantTextActive());
+
     if (renderDelay != TEXT_SPEED_NO_TRANSFER && renderDelay != TEXT_SPEED_INSTANT) {
         printer->textSpeedBottom--;
         printer->textSpeedTop = 1;
@@ -237,7 +243,19 @@ static void SysTask_RunTextPrinter(SysTask *task, void *data)
         printer->callbackParam = 0;
         Text_GenerateFontHalfRowLookupTable(printer->template.fgColor, printer->template.bgColor, printer->template.shadowColor);
 
-        switch (TextPrinter_Render(printer)) {
+        enum RenderResult result = TextPrinter_Render(printer);
+
+        if (printer->instant && result == RENDER_PRINT) {
+            int guard = 0;
+
+            do {
+                result = TextPrinter_Render(printer);
+            } while (result == RENDER_PRINT && ++guard < 1024);
+
+            Window_CopyToVRAM(printer->template.window);
+        }
+
+        switch (result) {
         case RENDER_PRINT:
             Window_CopyToVRAM(printer->template.window);
             // fall-through

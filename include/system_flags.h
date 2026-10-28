@@ -20,6 +20,7 @@ void SystemFlag_SetBagAcquired(VarsFlags *varsFlags);
 BOOL SystemFlag_CheckBagAcquired(VarsFlags *varsFlags);
 void SystemFlag_SetGameCompleted(VarsFlags *varsFlags);
 BOOL SystemFlag_CheckGameCompleted(VarsFlags *varsFlags);
+BOOL SystemFlag_HandleQuickBattleIntro(VarsFlags *varsFlags, enum HandleFlagOp op);
 void SystemFlag_SetHasPartner(VarsFlags *varsFlags);
 void SystemFlag_ClearHasPartner(VarsFlags *varsFlags);
 BOOL SystemFlag_CheckHasPartner(VarsFlags *varsFlags);

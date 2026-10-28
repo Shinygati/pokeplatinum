@@ -84,6 +84,7 @@
     ScriptEntry CommonScript_SetLookerBGM @ 0x807
     ScriptEntry CommonScript_FadeToDefaultMusic @ 0x808
     ScriptEntry CommonScript_GriseousOrbCouldNotBeRemoved @ 0x809
+    ScriptEntry CommonScript_PortablePC @ 0x80A
     ScriptEntryEnd
 
 CommonScript_Dummy2010:
@@ -905,19 +906,34 @@ CommonScript_InternalBagIsFull:
 
 CommonScript_PC:
     LockAll
+    ClearFlag FLAG_QOL_PORTABLE_PC
     PlaySE SEQ_SE_DP_PC_ON_sseq
     Call CommonScript_PCBootUpAnimation
     BufferPlayerName 0
     Message CommonStrings_Text_BootedUpThePC
     GoTo CommonScript_AccessWhichPC
 
+// Start menu PC: same menus as a real PC, minus the PC screen animations.
+CommonScript_PortablePC:
+    LockAll
+    SetFlag FLAG_QOL_PORTABLE_PC
+    PlaySE SEQ_SE_DP_PC_ON_sseq
+    BufferPlayerName 0
+    Message CommonStrings_Text_BootedUpThePC
+    GoTo CommonScript_AccessWhichPC
+
+CommonScript_PCAnimationSkip:
+    Return
+
 CommonScript_PCBootUpAnimation:
+    GoToIfSet FLAG_QOL_PORTABLE_PC, CommonScript_PCAnimationSkip
     LoadPCAnimation ANIMATION_TAG_PC
     PlayPCBootUpAnimation ANIMATION_TAG_PC
     WaitForAnimation ANIMATION_TAG_PC
     Return
 
 CommonScript_PCShutDownAnimation:
+    GoToIfSet FLAG_QOL_PORTABLE_PC, CommonScript_PCAnimationSkip
     PlayPCShutDownAnimation ANIMATION_TAG_PC
     WaitForAnimation ANIMATION_TAG_PC
     UnloadAnimation ANIMATION_TAG_PC
@@ -1133,6 +1149,7 @@ CommonScript_PCSwitchOff:
     CloseMessage
     PlaySE SEQ_SE_DP_PC_LOGOFF_sseq
     Call CommonScript_PCShutDownAnimation
+    ClearFlag FLAG_QOL_PORTABLE_PC
     ReleaseAll
     End
 
@@ -1145,6 +1162,7 @@ CommonScript_PCFadeIn:
 CommonScript_PCFadeOut:
     FadeScreenOut
     WaitFadeScreen
+    GoToIfSet FLAG_QOL_PORTABLE_PC, CommonScript_PCAnimationSkip
     UnloadAnimation ANIMATION_TAG_PC
     Return
 
@@ -1693,6 +1711,11 @@ CommonScript_RepelsEffectWoreOff:
     GoToIfEq VAR_RESULT, MENU_NO, CommonScript_RepelRenewFailed
     UseStrongestRepel VAR_RESULT
     GoToIfEq VAR_RESULT, FALSE, CommonScript_RepelRenewFailed
+    PlaySE SEQ_SE_DP_CARD2_sseq
+    BufferPlayerName 0
+    BufferItemName 1, VAR_RESULT
+    Message CommonStrings_Text_UsedAnotherRepel
+    WaitABPress
     CloseMessage
     ReleaseAll
     End

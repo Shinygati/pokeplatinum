@@ -736,6 +736,7 @@ static BOOL ScrCmd_FinishDistortionWorldGiratinaShadowEvent(ScriptContext *ctx);
 static BOOL ScrCmd_CheckNoWiFiPlazaCooldown(ScriptContext *ctx);
 static BOOL ScrCmd_SetPartyGiratinaForm(ScriptContext *ctx);
 static BOOL ScrCmd_CheckPartyHasFatefulEncounterRegigigas(ScriptContext *ctx);
+static BOOL ScrCmd_ResetEVs(ScriptContext *ctx);
 static BOOL ScriptContext_WaitForMovement(ScriptContext *ctx);
 static void sub_02040F28(FieldSystem *fieldSystem, SysTask *param1, MapObjectAnimCmd *param2);
 static void sub_02040F5C(SysTask *param0, void *param1);
@@ -3395,6 +3396,11 @@ static BOOL ScrCmd_StartChooseStarterScene(ScriptContext *ctx)
     ChooseStarterData *chooseStarterData = *fieldSysDataPtr;
 
     chooseStarterData->options = SaveData_GetOptions(ctx->fieldSystem->saveData);
+    chooseStarterData->otID = TrainerInfo_ID(SaveData_GetTrainerInfo(ctx->fieldSystem->saveData));
+
+    for (int i = 0; i < CHOOSE_STARTER_NUM_OPTIONS; i++) {
+        LegalShiny_RollGiftFrame(chooseStarterData->otID, SHINY_ODDS_GIFT, &chooseStarterData->frames[i]);
+    }
 
     FieldSystem_LaunchChooseStarterApp(ctx->fieldSystem, *fieldSysDataPtr);
     ScriptContext_Pause(ctx, ScriptContext_WaitForApplicationExit);
@@ -3409,6 +3415,15 @@ static BOOL ScrCmd_SaveChosenStarter(ScriptContext *ctx)
     ChooseStarterData *chooseStarterData = (*fieldSysDataPtr);
 
     SystemVars_SetPlayerStarter(SaveData_GetVarsFlags(ctx->fieldSystem->saveData), chooseStarterData->species);
+
+    // The next GivePokemon of this species uses the frame shown in the briefcase.
+    static const u16 sStarterOrder[CHOOSE_STARTER_NUM_OPTIONS] = { SPECIES_TURTWIG, SPECIES_CHIMCHAR, SPECIES_PIPLUP };
+
+    for (int i = 0; i < CHOOSE_STARTER_NUM_OPTIONS; i++) {
+        if (sStarterOrder[i] == chooseStarterData->species) {
+            LegalShiny_SetPendingGift(chooseStarterData->species, &chooseStarterData->frames[i]);
+        }
+    }
 
     Heap_Free(*fieldSysDataPtr);
 

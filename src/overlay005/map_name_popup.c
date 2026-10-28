@@ -9,6 +9,7 @@
 #include "field/field_system_sub2_t.h"
 
 #include "bg_window.h"
+#include "font.h"
 #include "graphics.h"
 #include "heap.h"
 #include "map_header.h"
@@ -22,6 +23,9 @@
 #define POPUP_WIDTH_TILES  17
 #define POPUP_HEIGHT_TILES 5
 #define POPUP_SIZE_TILES   (POPUP_WIDTH_TILES * POPUP_HEIGHT_TILES)
+
+// entryID used when the popup shows a caller-supplied string (e.g. the Poké Radar chain).
+#define POPUP_ENTRY_CUSTOM_STRING 0xFFFFFFFF
 
 enum MapNamePopUpState {
     MAP_NAME_POPUP_STATE_END,
@@ -38,6 +42,16 @@ static void SysTask_MapNamePopUpWindow(SysTask *task, void *data);
 static void MapNamePopUp_DrawWindowFrame(MapNamePopUp *mapPopUp, s32 strWidth);
 static void MapNamePopUp_StartSlideOut(MapNamePopUp *mapPopUp);
 static void MapNamePopUp_PrintMapName(MapNamePopUp *mapPopUp, const String *string);
+static u32 MapNamePopUp_LoadEntryString(MapNamePopUp *mapPopUp);
+
+static u32 MapNamePopUp_LoadEntryString(MapNamePopUp *mapPopUp)
+{
+    if (mapPopUp->entryID == POPUP_ENTRY_CUSTOM_STRING) {
+        return Font_CalcStringWidth(FONT_SYSTEM, mapPopUp->string, 0); // already in mapPopUp->string
+    }
+
+    return MapHeader_LoadString(mapPopUp->msgLoader, mapPopUp->entryID, mapPopUp->string);
+}
 
 static void MapNamePopUp_LoadPalette(void *src, u16 size, u16 offset)
 {
@@ -160,7 +174,7 @@ static void SysTask_MapNamePopUpWindow(SysTask *task, void *data)
             if (mapPopUp->shouldSlideIn) {
                 mapPopUp->shouldSlideIn = FALSE;
 
-                strWidth = MapHeader_LoadString(mapPopUp->msgLoader, mapPopUp->entryID, mapPopUp->string);
+                strWidth = MapNamePopUp_LoadEntryString(mapPopUp);
 
                 MapNamePopUp_DrawWindowFrame(mapPopUp, strWidth);
                 MapNamePopUp_PrintMapName(mapPopUp, mapPopUp->string);
@@ -227,7 +241,7 @@ void MapNamePopUp_Show(MapNamePopUp *mapPopUp, s32 mapLabelTextID, s32 mapLabelW
         mapPopUp->task = SysTask_Start(SysTask_MapNamePopUpWindow, mapPopUp, 0);
         mapPopUp->state = MAP_NAME_POPUP_STATE_SLIDE_IN;
 
-        strWidth = MapHeader_LoadString(mapPopUp->msgLoader, mapPopUp->entryID, mapPopUp->string);
+        strWidth = MapNamePopUp_LoadEntryString(mapPopUp);
         mapPopUp->windowID = mapLabelWindowID;
 
         MapNamePopUp_DrawWindowFrame(mapPopUp, strWidth);
@@ -250,6 +264,13 @@ void MapNamePopUp_Show(MapNamePopUp *mapPopUp, s32 mapLabelTextID, s32 mapLabelW
             break;
         }
     }
+}
+
+// Same slide-in banner as the location name, but with a caller-supplied string.
+void MapNamePopUp_ShowString(MapNamePopUp *mapPopUp, const String *string, s32 windowID)
+{
+    String_Copy(mapPopUp->string, string);
+    MapNamePopUp_Show(mapPopUp, POPUP_ENTRY_CUSTOM_STRING, windowID);
 }
 
 void MapNamePopUp_Hide(MapNamePopUp *mapPopUp)

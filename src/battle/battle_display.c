@@ -95,6 +95,12 @@ typedef struct TrainerEncounterData {
     int enterFrameCount;
 } TrainerEncounterData;
 
+// BATTLE INTRO = QUICK: intro slides move this many times faster and the
+// pre-slide pause is shortened. Totals (e.g. background scroll) are unchanged.
+#define QUICK_INTRO_SPEED 4
+#define QUICK_INTRO_DELAY 4
+#define QUICK_STEP(battleSys) (BattleSystem_QuickBattleIntro(battleSys) ? QUICK_INTRO_SPEED : 1)
+
 static void Task_SetEncounter(SysTask *task, void *data);
 static void Task_SetGiratinaEncounter(SysTask *task, void *data);
 static void Task_ShowEncounter(SysTask *task, void *data);
@@ -1730,7 +1736,7 @@ static void Task_SetEncounter(SysTask *task, void *data)
 
     switch (monEncounterData->state) {
     case 0:
-        monEncounterData->delay = 28;
+        monEncounterData->delay = BattleSystem_QuickBattleIntro(monEncounterData->battleSys) ? QUICK_INTRO_DELAY : 28;
         monEncounterData->state++;
     case 1:
         if (--monEncounterData->delay) {
@@ -1744,7 +1750,7 @@ static void Task_SetEncounter(SysTask *task, void *data)
 
             if (monEncounterData->battlerType == BATTLER_TYPE_SOLO_ENEMY || monEncounterData->battlerType == BATTLER_TYPE_ENEMY_SIDE_SLOT_1) {
                 if (x < (24 * 8)) {
-                    ManagedSprite_OffsetPositionXY(monEncounterData->terrain->managedSprite, 8, 0);
+                    ManagedSprite_OffsetPositionXY(monEncounterData->terrain->managedSprite, 8 * QUICK_STEP(monEncounterData->battleSys), 0);
                 } else {
                     ManagedSprite_SetPositionXY(monEncounterData->terrain->managedSprite, 24 * 8, 8 * 11);
                 }
@@ -1797,7 +1803,7 @@ static void Task_SetEncounter(SysTask *task, void *data)
 
             if (monEncounterData->battlerType == BATTLER_TYPE_SOLO_PLAYER || monEncounterData->battlerType == BATTLER_TYPE_PLAYER_SIDE_SLOT_1) {
                 if (x > 64) {
-                    ManagedSprite_OffsetPositionXY(monEncounterData->terrain->managedSprite, -8, 0);
+                    ManagedSprite_OffsetPositionXY(monEncounterData->terrain->managedSprite, -8 * QUICK_STEP(monEncounterData->battleSys), 0);
                 } else {
                     ManagedSprite_SetPositionXY(monEncounterData->terrain->managedSprite, 64, 128 + 8);
                 }
@@ -1887,7 +1893,7 @@ static void Task_SetGiratinaEncounter(SysTask *task, void *data)
 
     switch (monEncounterData->state) {
     case 0:
-        monEncounterData->delay = 28;
+        monEncounterData->delay = BattleSystem_QuickBattleIntro(monEncounterData->battleSys) ? QUICK_INTRO_DELAY : 28;
         monEncounterData->state++;
     case 1:
         if (--monEncounterData->delay) {
@@ -1900,14 +1906,14 @@ static void Task_SetGiratinaEncounter(SysTask *task, void *data)
 
         if (monEncounterData->battlerType == BATTLER_TYPE_SOLO_ENEMY || monEncounterData->battlerType == BATTLER_TYPE_ENEMY_SIDE_SLOT_1) {
             if (x < (24 * 8)) {
-                ManagedSprite_OffsetPositionXY(monEncounterData->terrain->managedSprite, 8, 0);
+                ManagedSprite_OffsetPositionXY(monEncounterData->terrain->managedSprite, 8 * QUICK_STEP(monEncounterData->battleSys), 0);
             } else {
                 ManagedSprite_SetPositionXY(monEncounterData->terrain->managedSprite, 24 * 8, 8 * 11);
             }
         }
 
         ManagedSprite_GetPositionXY(monEncounterData->terrain->managedSprite, &x, &y);
-        PokemonSprite_AddAttribute(monEncounterData->sprite, MON_SPRITE_Y_CENTER, 8 / 2);
+        PokemonSprite_AddAttribute(monEncounterData->sprite, MON_SPRITE_Y_CENTER, (8 / 2) * QUICK_STEP(monEncounterData->battleSys));
 
         if (PokemonSprite_GetAttribute(monEncounterData->sprite, MON_SPRITE_Y_CENTER) >= monEncounterData->targetPos) {
             PokemonSprite_InitAnim(monEncounterData->sprite, 1);
@@ -2625,10 +2631,15 @@ static void Task_SetTrainerEncounter(SysTask *task, void *data)
     s16 x1, y1, x2, y2;
     u32 battleType = BattleSystem_GetBattleType(trainerEncounterData->battleSys);
 
-    if (trainerEncounterData->enterFrameCount < 33 && trainerEncounterData->state >= 2
+    BOOL quickIntro = BattleSystem_QuickBattleIntro(trainerEncounterData->battleSys);
+
+    if (trainerEncounterData->state >= 2
         && (trainerEncounterData->battlerType == BATTLER_TYPE_SOLO_PLAYER || trainerEncounterData->battlerType == BATTLER_TYPE_PLAYER_SIDE_SLOT_1)) {
-        Bg_SetOffset(BattleSystem_GetBgConfig(trainerEncounterData->battleSys), BG_LAYER_MAIN_3, BG_OFFSET_UPDATE_ADD_X, 4);
-        trainerEncounterData->enterFrameCount++;
+        // Same 33 steps of 4px as vanilla, just several per frame when quick.
+        for (int step = 0; step < (quickIntro ? QUICK_INTRO_SPEED : 1) && trainerEncounterData->enterFrameCount < 33; step++) {
+            Bg_SetOffset(BattleSystem_GetBgConfig(trainerEncounterData->battleSys), BG_LAYER_MAIN_3, BG_OFFSET_UPDATE_ADD_X, 4);
+            trainerEncounterData->enterFrameCount++;
+        }
     }
 
     switch (trainerEncounterData->state) {
@@ -2638,7 +2649,7 @@ static void Task_SetTrainerEncounter(SysTask *task, void *data)
             ManagedSprite_SetAnim(trainerEncounterData->managedSprite, 2);
         }
 
-        trainerEncounterData->delay = 28;
+        trainerEncounterData->delay = quickIntro ? QUICK_INTRO_DELAY : 28;
         trainerEncounterData->state = 1;
     case 1:
         if (--trainerEncounterData->delay) {
@@ -2653,7 +2664,7 @@ static void Task_SetTrainerEncounter(SysTask *task, void *data)
         if (trainerEncounterData->face == FACE_FRONT) {
             if (trainerEncounterData->battlerType == BATTLER_TYPE_SOLO_ENEMY || trainerEncounterData->battlerType == BATTLER_TYPE_ENEMY_SIDE_SLOT_1) {
                 if (x1 < (24 * 8)) {
-                    ManagedSprite_OffsetPositionXY(trainerEncounterData->terrain->managedSprite, 8, 0);
+                    ManagedSprite_OffsetPositionXY(trainerEncounterData->terrain->managedSprite, 8 * (quickIntro ? QUICK_INTRO_SPEED : 1), 0);
                 } else {
                     ManagedSprite_SetPositionXY(trainerEncounterData->terrain->managedSprite, 24 * 8, 8 * 11);
                 }
@@ -2697,7 +2708,7 @@ static void Task_SetTrainerEncounter(SysTask *task, void *data)
         } else {
             if (trainerEncounterData->battlerType == BATTLER_TYPE_SOLO_PLAYER || trainerEncounterData->battlerType == BATTLER_TYPE_PLAYER_SIDE_SLOT_1) {
                 if (x1 > 64) {
-                    ManagedSprite_OffsetPositionXY(trainerEncounterData->terrain->managedSprite, -8, 0);
+                    ManagedSprite_OffsetPositionXY(trainerEncounterData->terrain->managedSprite, -8 * (quickIntro ? QUICK_INTRO_SPEED : 1), 0);
                 } else {
                     ManagedSprite_SetPositionXY(trainerEncounterData->terrain->managedSprite, 64, 128 + 8);
                 }
@@ -3025,14 +3036,14 @@ static void Task_SlideTrainerOut(SysTask *task, void *data)
     switch (slideTrainerOutData->state) {
     case 0:
         if (slideTrainerOutData->face == FACE_FRONT) {
-            ManagedSprite_OffsetPositionXY(slideTrainerOutData->battlerData->managedSprite, 5, 0);
+            ManagedSprite_OffsetPositionXY(slideTrainerOutData->battlerData->managedSprite, 5 * QUICK_STEP(slideTrainerOutData->battleSys), 0);
             ManagedSprite_GetPositionXY(slideTrainerOutData->battlerData->managedSprite, &x, &y);
 
             if (x >= (256 + 40)) {
                 slideTrainerOutData->state++;
             }
         } else {
-            ManagedSprite_OffsetPositionXY(slideTrainerOutData->battlerData->managedSprite, -5, 0);
+            ManagedSprite_OffsetPositionXY(slideTrainerOutData->battlerData->managedSprite, -5 * QUICK_STEP(slideTrainerOutData->battleSys), 0);
             ManagedSprite_GetPositionXY(slideTrainerOutData->battlerData->managedSprite, &x, &y);
 
             if (x <= -40) {
@@ -3066,14 +3077,14 @@ static void Task_SlideTrainerIn(SysTask *task, void *data)
         ManagedSprite_GetPositionXY(slideTrainerInData->managedSprite, &x, &y);
 
         if (slideTrainerInData->face == FACE_BACK) {
-            x += 5;
+            x += 5 * QUICK_STEP(slideTrainerInData->battleSys);
 
             if (x >= slideTrainerInData->x) {
                 x = slideTrainerInData->x;
                 slideTrainerInData->state++;
             }
         } else {
-            x -= 5;
+            x -= 5 * QUICK_STEP(slideTrainerInData->battleSys);
 
             if (x <= slideTrainerInData->x) {
                 x = slideTrainerInData->x;

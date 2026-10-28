@@ -31,6 +31,7 @@ BOOL GetRadarChainActive(const RadarChain *chain);
 BOOL RefreshRadarChain(FieldTask *param0);
 void RadarChain_Increment(FieldSystem *fieldSystem);
 int GetChainCount(FieldSystem *fieldSystem);
+void PokeRadar_ShowChainCount(FieldSystem *fieldSystem);
 void RadarChargeStep(FieldSystem *fieldSystem);
 
 #endif // POKEPLATINUM_POKERADAR_H

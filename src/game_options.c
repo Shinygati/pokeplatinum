@@ -77,6 +77,30 @@ u8 Options_TextFrameDelay(const Options *options)
     }
 }
 
+BOOL Options_InstantText(const Options *options)
+{
+    return options->instantText;
+}
+
+void Options_SetInstantText(Options *options, BOOL instant)
+{
+    options->instantText = (instant != FALSE);
+}
+
+// True when the player picked INST text speed. INST is stored as FAST plus the
+// spare instantText bit, so a vanilla game loading this save just sees FAST.
+BOOL Options_IsInstantTextActive(void)
+{
+    SaveData *saveData = SaveData_PtrOrNull();
+
+    if (saveData == NULL) {
+        return FALSE;
+    }
+
+    const Options *options = SaveData_GetOptions(saveData);
+    return options->textSpeed == OPTIONS_TEXT_SPEED_FAST && options->instantText;
+}
+
 int Options_SoundMode(const Options *options)
 {
     return options->soundMode;

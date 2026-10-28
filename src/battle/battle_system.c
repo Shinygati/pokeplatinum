@@ -56,6 +56,7 @@
 #include "pokemon_sprite.h"
 #include "poketch.h"
 #include "render_text.h"
+#include "savedata.h"
 #include "render_window.h"
 #include "screen_fade.h"
 #include "sound.h"
@@ -64,11 +65,13 @@
 #include "sprite_system.h"
 #include "string_gf.h"
 #include "string_template.h"
+#include "system_flags.h"
 #include "text.h"
 #include "trainer_data.h"
 #include "trainer_info.h"
 #include "tv_segment.h"
 #include "unk_0202F1D4.h"
+#include "vars_flags.h"
 
 static void BattleMessage_CheckSide(BattleSystem *battleSys, BattleMessage *battleMsg);
 static void BattleMessage_FillFormatBuffers(BattleSystem *battleSys, BattleMessage *battleMsg);
@@ -755,6 +758,24 @@ BOOL BattleSystem_UseBagItem(BattleSystem *battleSys, int battler, int partySlot
     }
 
     return result;
+}
+
+// Options menu BATTLE INTRO = QUICK. Only used for local, non-recorded battles
+// so link battles and replays keep vanilla timing.
+BOOL BattleSystem_QuickBattleIntro(BattleSystem *battleSys)
+{
+    if ((BattleSystem_GetBattleType(battleSys) & BATTLE_TYPE_LINK)
+        || (BattleSystem_GetBattleStatusMask(battleSys) & BATTLE_STATUS_RECORDED)) {
+        return FALSE;
+    }
+
+    SaveData *saveData = SaveData_PtrOrNull();
+
+    if (saveData == NULL) {
+        return FALSE;
+    }
+
+    return SystemFlag_HandleQuickBattleIntro(SaveData_GetVarsFlags(saveData), HANDLE_FLAG_CHECK);
 }
 
 u32 BattleSystem_GetBattleStatusMask(BattleSystem *battleSys)

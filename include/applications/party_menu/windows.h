@@ -36,5 +36,7 @@ void PartyMenu_DrawYesNoChoice(PartyMenuApplication *application);
 void PartyMenu_DrawLevelUpStatIncreases(PartyMenuApplication *application);
 void PartyMenu_DrawLevelUpNewStatValues(PartyMenuApplication *application);
 void PartyMenu_RemoveContextWindow(PartyMenuApplication *application);
+void PartyMenu_DrawEVEditor(PartyMenuApplication *application, BOOL addWindow);
+enum PartyMenuState PartyMenu_HandleEVEdit(PartyMenuApplication *application);
 
 #endif // POKEPLATINUM_PARTY_MENU_WINDOWS_H

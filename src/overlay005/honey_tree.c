@@ -372,9 +372,13 @@ static u8 GetTreeIDFromMapHeaderID(const enum MapHeaderID mapHeaderID)
     return i;
 }
 
+// Fork: trees are ready after 1 hour instead of 6. The timer still counts down from 24 hours,
+// so the saved value means the same thing to vanilla. (Name kept from vanilla.)
+#define HONEY_TREE_WAIT_MINUTES 60
+
 static const BOOL SixHoursSinceSlathered(const int minutesLeft)
 {
-    if ((0 < minutesLeft) && (minutesLeft <= (18 * 60))) {
+    if ((0 < minutesLeft) && (minutesLeft <= (24 * 60) - HONEY_TREE_WAIT_MINUTES)) {
         return TRUE;
     } else {
         return FALSE;

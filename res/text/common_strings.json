@@ -877,6 +877,13 @@
     {
       "id": "CommonStrings_Text_UseAnotherRepel",
       "en_US": "Would you like to use another Repel?"
+    },
+    {
+      "id": "CommonStrings_Text_UsedAnotherRepel",
+      "en_US": [
+        "{STRVAR_1 3, 0, 0} used the\n",
+        "{STRVAR_1 8, 1, 0}."
+      ]
     }
   ]
 }

@@ -12,7 +12,7 @@ typedef struct Options {
     u16 battleScene : 1;
     u16 buttonMode : 2;
     u16 frame : 5;
-    u16 : 1;
+    u16 instantText : 1; // Was unused padding in vanilla; vanilla ignores it and still sees FAST.
 } Options;
 
 Options *Options_New(enum HeapID heapID);
@@ -22,6 +22,9 @@ void Options_SetSystemButtonMode(SaveData *saveData, enum OptionsButtonMode mode
 int Options_TextSpeed(const Options *options);
 void Options_SetTextSpeed(Options *options, enum OptionsTextSpeed speed);
 u8 Options_TextFrameDelay(const Options *options);
+BOOL Options_InstantText(const Options *options);
+void Options_SetInstantText(Options *options, BOOL instant);
+BOOL Options_IsInstantTextActive(void);
 int Options_SoundMode(const Options *options);
 void Options_SetSoundMode(Options *options, enum OptionsSoundMode mode);
 int Options_BattleScene(const Options *options);

@@ -79,6 +79,7 @@ typedef struct SaveCheckFooter {
 
 SaveData *SaveData_Init(void);
 SaveData *SaveData_Ptr(void);
+SaveData *SaveData_PtrOrNull(void);
 void *SaveData_SaveTable(SaveData *saveData, int saveTableID);
 const void *SaveData_SaveTableConst(const SaveData *saveData, int saveTableID);
 BOOL SaveData_Erase(SaveData *saveData);

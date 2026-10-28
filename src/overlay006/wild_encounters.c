@@ -397,9 +397,10 @@ BOOL WildEncounters_TryFishingEncounter(FieldSystem *fieldSystem, enum Encounter
     InitEncounterFieldParams(fieldSystem, firstPartyMon, NULL, &encounterFieldParams);
     encounterRate = ModifyEncounterRateWithFieldParams(TRUE, encounterRate, &encounterFieldParams, FieldOverworldState_GetWeather(SaveData_GetFieldOverworldState(fieldSystem->saveData)), firstPartyMon);
 
-    if (LCRNG_RandMod(100) >= encounterRate) {
-        return FALSE;
-    }
+    // Fishing always hooks: instead of failing, keep rolling the hook check until it passes.
+    // Each roll is the same single LCRNG call as vanilla, so the call right before the slot
+    // is still a passing hook roll and the Method J frame stays legal.
+    while (LCRNG_RandMod(100) >= encounterRate) {}
 
     // Mt. Coronet B1F always spends one rand on the Feebas tile check between the hook and the slot.
     sFishingInCoronetFeebasArea = MapHeader_HasFeebasTiles(fieldSystem->location->mapHeaderID);

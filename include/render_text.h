@@ -68,6 +68,7 @@ typedef struct TextPrinter {
     u8 callbackResult;
     u16 callbackParam;
     void *iconGfx;
+    u8 instant; // INST text speed: print up to the next wait in one frame
 } TextPrinter;
 
 enum RenderResult {

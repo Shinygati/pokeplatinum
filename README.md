@@ -22,6 +22,9 @@ All credit for the decompilation goes to the pret contributors. This fork only a
 | --- | --- |
 | Egg steps | Both **egg creation** and **egg hatching** step requirements are cut in half. |
 | Egg IVs | Breeding eggs **guarantee a minimum of 15 IVs in every stat**. |
+| Everstone | An Everstone on **either parent always** passes its nature (Gen 6 style). |
+| Destiny Knot | A Destiny Knot on either parent passes **5 IVs** instead of 3. |
+| Shiny Eggs | The summary screen shows the **shiny star on Eggs** that will hatch shiny. |
 
 ### Quality of life
 
@@ -31,6 +34,16 @@ All credit for the decompilation goes to the pret contributors. This fork only a
 | Repel | When a Repel runs out, the game **prompts you to use another one**. |
 | Poké Radar | **More lenient chain continuation rates**, so chains are easier to keep going. |
 | Great Marsh | The Safari Game starts you with **50 Safari Balls and 1500 steps**. |
+| Text speed | New **INST** text speed: each message box prints instantly. |
+| Battle intro | New **BATTLE INTRO** option (replaces the CLOSE row; B or START closes the menu). **QUICK** makes the battle slide-in 4x faster. |
+| HP / EXP bars | HP bars drain **2x** faster and EXP bars fill **3x** faster. |
+| TMs | TMs are **reusable** and are not used up when a move is taught. |
+| PC | A **PC** option in the start menu, **outdoors only**, once you have a Pokémon. When the menu is full it takes EXIT's place (B and X still close the menu). |
+| Move Maniac | The Pastoria Move Maniac is **free**: no Heart Scale needed. |
+| Fishing | Fishing **always hooks**, and a hooked Pokémon never gets away. |
+| Poké Radar | The current **chain length** slides in on screen after each chained battle. |
+| Honey trees | Trees are ready after **1 hour** instead of 6. |
+| Starters | Starters are rolled when the briefcase opens, so a **shiny starter shows as shiny in the briefcase**. |
 
 ### Experience
 
@@ -47,6 +60,10 @@ All of the Mystery Gift events are activated after beating the Elite Four, so no
 - Shaymin
 - Rotom
 - Regigigas / the Regi trio
+
+### Save compatibility
+
+Saves stay compatible with unmodified Platinum. INST text is stored as FAST plus a spare bit in the options that vanilla ignores, BATTLE INTRO uses `FLAG_UNUSED_0x0168` (never touched by vanilla), and the start-menu PC uses a RAM-only flag that is never saved.
 
 ## Building
 

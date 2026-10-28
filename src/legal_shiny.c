@@ -503,14 +503,42 @@ u32 LegalShiny_AdjustEggPersonality(u32 personality, u32 otID, BOOL shiny)
 }
 
 #ifndef LEGAL_SHINY_HOST
+static struct {
+    BOOL valid;
+    u16 species;
+    LegalFrame frame;
+} sPendingGift;
+
+void LegalShiny_RollGiftFrame(u32 otID, u32 odds, LegalFrame *out)
+{
+    if (!LegalShiny_Roll(odds) || !LegalShiny_FindShinyFrame(NULL, otID, LEGAL_SHINY_NATURE_ANY, FALSE, out)) {
+        LegalShiny_RollNormalMethod1(otID, LEGAL_SHINY_NATURE_ANY, out);
+    }
+}
+
+void LegalShiny_SetPendingGift(u16 species, const LegalFrame *frame)
+{
+    sPendingGift.valid = TRUE;
+    sPendingGift.species = species;
+    sPendingGift.frame = *frame;
+}
+
+void LegalShiny_ClearPendingGift(void)
+{
+    sPendingGift.valid = FALSE;
+}
+
 void Pokemon_InitGiftWithLegalShinyOdds(Pokemon *mon, int species, int level, u32 otID, u32 odds)
 {
     LegalFrame frame;
 
-    if (!LegalShiny_Roll(odds) || !LegalShiny_FindShinyFrame(NULL, otID, LEGAL_SHINY_NATURE_ANY, FALSE, &frame)) {
-        LegalShiny_RollNormalMethod1(otID, LEGAL_SHINY_NATURE_ANY, &frame);
+    if (sPendingGift.valid && sPendingGift.species == species) {
+        frame = sPendingGift.frame; // e.g. the starter shown in the briefcase
+    } else {
+        LegalShiny_RollGiftFrame(otID, odds, &frame);
     }
 
+    sPendingGift.valid = FALSE;
     LegalShiny_ApplyFrame(&frame);
     Pokemon_InitWith(mon, species, level, INIT_IVS_RANDOM, TRUE, frame.personality, OTID_NOT_SET, 0);
 }

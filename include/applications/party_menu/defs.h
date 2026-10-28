@@ -168,6 +168,7 @@ enum PartyMenuString {
     PARTY_MENU_STR_ENTER_2,
     PARTY_MENU_STR_SET,
     PARTY_MENU_STR_CONFIRM,
+    PARTY_MENU_STR_EVS,
     PARTY_MENU_STR_MOVE0,
     PARTY_MENU_STR_MOVE1,
     PARTY_MENU_STR_MOVE2,
@@ -340,6 +341,7 @@ enum PartyMenuState {
     PARTY_MENU_STATE_WAIT_FORM_CHANGE,
     PARTY_MENU_STATE_FADE_OUT,
     PARTY_MENU_STATE_WAIT_FADE_OUT,
+    PARTY_MENU_STATE_EDIT_EVS,
 };
 
 typedef struct PartyMenuApplication PartyMenuApplication;
@@ -391,6 +393,8 @@ struct PartyMenuApplication {
         u16 monStats[STAT_MAX];
         u16 monHpTransfer[HP_TRANSFER_INDEX_MAX];
     };
+    u16 evEditValues[STAT_MAX]; // working copy of the EVs being edited
+    u8 evEditSelection;         // selected row in the EV editor
     HeightWeightData *heightWeight;
     PartyMenuFormChange *formChanger;
     G3DPipelineBuffers *formChange3DPipeline;

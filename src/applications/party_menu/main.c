@@ -459,6 +459,9 @@ static BOOL PartyMenu_Main(ApplicationManager *appMan, int *state)
             *state = PARTY_MENU_STATE_WAIT_FORM_CHANGE;
         }
         break;
+    case PARTY_MENU_STATE_EDIT_EVS:
+        *state = PartyMenu_HandleEVEdit(partyMenu);
+        break;
     case PARTY_MENU_STATE_FADE_OUT:
         App_StartScreenFade(TRUE, HEAP_ID_PARTY_MENU);
         *state = PARTY_MENU_STATE_WAIT_FADE_OUT;
@@ -1752,7 +1755,7 @@ static void sub_0207FFC8(PartyMenuApplication *application)
     u8 v1;
 
     Window_EraseMessageBox(&application->windows[32], 1);
-    v0 = Heap_Alloc(HEAP_ID_PARTY_MENU, 10);
+    v0 = Heap_Alloc(HEAP_ID_PARTY_MENU, 12);
 
     switch (application->partyMenu->mode) {
     case PARTY_MENU_MODE_FIELD:
@@ -1855,6 +1858,9 @@ static u8 GetContextMenuEntriesForPartyMon(PartyMenuApplication *application, u8
                 menuEntriesBuffer[count] = 2;
             }
 
+            count++;
+
+            menuEntriesBuffer[count] = PARTY_MENU_STR_EVS;
             count++;
         } else {
             menuEntriesBuffer[count] = 0;

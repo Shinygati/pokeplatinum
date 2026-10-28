@@ -20,6 +20,7 @@
 #include "graphics.h"
 #include "gx_layers.h"
 #include "heap.h"
+#include "legal_shiny.h"
 #include "menu.h"
 #include "message.h"
 #include "overlay_manager.h"
@@ -217,6 +218,8 @@ typedef struct ChooseStarterApp {
     SpriteResourceCollection *spriteResourceCollection[6];
     PokemonSpriteManager *spriteManager;
     PokemonSprite *sprites[NUM_STARTER_OPTIONS];
+    u32 starterPersonality[NUM_STARTER_OPTIONS]; // fork: pre-rolled PIDs (see ChooseStarterData)
+    u8 starterShiny[NUM_STARTER_OPTIONS];
     StarterPreviewGraphics previewGraphics;
     NNSFndAllocator allocator;
     ChooseStarter3DGraphics starter3DGraphics[CHOOSE_STARTER_3D_GRAPHICS_NUM];
@@ -282,7 +285,7 @@ static void AdvancePokeballChoiceGraphics(ChooseStarterApp *app, enum HeapID hea
 static void UpdateSelectedPokeballAnimation(ChooseStarterApp *app);
 static void UpdateCursorPosition(ChooseStarterApp *app);
 static void AdvancePokeballConfirmGraphics(ChooseStarterApp *app, enum HeapID heapID);
-static void MakePokemonSprite(PokemonSprite **sprite, ChooseStarterApp *app, int species);
+static void MakePokemonSprite(PokemonSprite **sprite, ChooseStarterApp *app, int species, int option);
 static void Delete3DGraphic(ChooseStarter3DGraphics *starter3DGraphics, NNSFndAllocator *allocator);
 static void Draw3DGraphics(ChooseStarter3DGraphics *starter3DGraphics);
 static void Set3DGraphicsIsVisible(ChooseStarter3DGraphics *starter3DGraphics, BOOL isVisible);
@@ -334,6 +337,11 @@ BOOL ChooseStarter_Init(ApplicationManager *appMan, int *param1)
     ChooseStarterData *data = ApplicationManager_Args(appMan);
     app->messageFrame = Options_Frame(data->options);
     app->textFrameDelay = Options_TextFrameDelay(data->options);
+
+    for (int i = 0; i < NUM_STARTER_OPTIONS; i++) {
+        app->starterPersonality[i] = data->frames[i].personality;
+        app->starterShiny[i] = LegalShiny_IsShiny(data->otID, data->frames[i].personality);
+    }
 
     VramTransfer_New(8, HEAP_ID_CHOOSE_STARTER_APP);
     SetVBlankCallback(ChooseStarterAppMainCallback, app);
@@ -688,21 +696,22 @@ static void MakePokemonSprites(ChooseStarterApp *app, enum HeapID heapID)
     PokemonSpriteManager_SetCharBaseAddrAndSize(app->spriteManager, NNS_GfdGetTexKeyAddr(texture), NNS_GfdGetTexKeySize(texture));
     PokemonSpriteManager_SetPlttBaseAddrAndSize(app->spriteManager, NNS_GfdGetPlttKeyAddr(palette), NNS_GfdGetPlttKeySize(palette));
 
-    MakePokemonSprite(&app->sprites[0], app, STARTER_OPTION_0);
-    MakePokemonSprite(&app->sprites[1], app, STARTER_OPTION_1);
-    MakePokemonSprite(&app->sprites[2], app, STARTER_OPTION_2);
+    MakePokemonSprite(&app->sprites[0], app, STARTER_OPTION_0, 0);
+    MakePokemonSprite(&app->sprites[1], app, STARTER_OPTION_1, 1);
+    MakePokemonSprite(&app->sprites[2], app, STARTER_OPTION_2, 2);
 
     for (int i = 0; i < NUM_STARTER_OPTIONS; i++) {
         PokemonSprite_SetAttribute(app->sprites[i], MON_SPRITE_HIDE, TRUE);
     }
 }
 
-static void MakePokemonSprite(PokemonSprite **sprite, ChooseStarterApp *app, int species)
+static void MakePokemonSprite(PokemonSprite **sprite, ChooseStarterApp *app, int species, int option)
 {
-    int gender = Pokemon_GetGenderOf(species, 0);
+    u32 personality = app->starterPersonality[option];
+    int gender = Pokemon_GetGenderOf(species, personality);
 
     PokemonSpriteTemplate spriteTemplate;
-    BuildPokemonSpriteTemplate(&spriteTemplate, species, gender, FACE_FRONT, FALSE, NULL, NULL);
+    BuildPokemonSpriteTemplate(&spriteTemplate, species, gender, FACE_FRONT, app->starterShiny[option], 0, personality);
 
     *sprite = PokemonSpriteManager_CreateSprite(app->spriteManager,
         &spriteTemplate,

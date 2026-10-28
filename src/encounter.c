@@ -427,6 +427,7 @@ static BOOL FieldTask_WildEncounter(FieldTask *task)
         if (GetRadarChainActive(fieldSystem->chain)) {
             SetupGrassPatches(fieldSystem, encounter->dto->resultMask, fieldSystem->chain);
             FieldSystem_CreateShakingRadarPatches(fieldSystem, fieldSystem->chain);
+            PokeRadar_ShowChainCount(fieldSystem);
         }
 
         encounter->state++;

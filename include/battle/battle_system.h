@@ -181,6 +181,7 @@ int BattleSystem_GetEnemyInSlot(BattleSystem *battleSys, int attacker, int slot)
  */
 BOOL BattleSystem_UseBagItem(BattleSystem *battleSys, int battler, int partySlot, int moveSlot, int item);
 u32 BattleSystem_GetBattleStatusMask(BattleSystem *battleSys);
+BOOL BattleSystem_QuickBattleIntro(BattleSystem *battleSys);
 
 /**
  * @brief Get the time of day.

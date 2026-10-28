@@ -1006,6 +1006,21 @@
         "The {STRVAR_1 8, 0, 0} cannot be\n",
         "given here.\n"
       ]
+    },
+    {
+      "id": "PartyMenu_Text_EVs",
+      "en_US": "Edit EVS"
+    },
+    {
+      "id": "PartyMenu_Text_EVEditHelp",
+      "en_US": [
+        "Up/Down: stat   Left/Right: +/-1\n",
+        "L/R: +/-10   A: save   B: cancel"
+      ]
+    },
+    {
+      "id": "PartyMenu_Text_EVCursor",
+      "en_US": "●"
     }
   ]
 }

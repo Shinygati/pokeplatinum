@@ -133,6 +133,6 @@ BOOL ScrCmd_UseStrongestRepel(ScriptContext *ctx)
     *repelSteps = (u8)Item_LoadParam(
         item, ITEM_PARAM_EFFECT_PARAM, HEAP_ID_FIELD1);
 
-    *result = TRUE;
+    *result = item; // the Repel that was used (non-zero), so the script can name it
     return FALSE;
 }

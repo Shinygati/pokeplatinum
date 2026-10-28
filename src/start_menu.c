@@ -101,7 +101,11 @@ enum StartMenuOption {
     START_MENU_OPTION_EXIT,
     START_MENU_OPTION_CHAT,
     START_MENU_OPTION_RETIRE,
+    START_MENU_OPTION_PC, // fork: storage PC from the start menu (outdoors only)
 };
+
+// The PC icon was appended after the female BAG icon (index 9) in icons.png.
+#define START_MENU_ICON_PC 10
 
 typedef struct MenuMailData {
     u16 itemID;
@@ -178,6 +182,7 @@ static BOOL StartMenu_ExitBerryTag(FieldTask *fieldTask);
 static void StartMenu_EvolveInit(FieldTask *fieldTask);
 static void StartMenu_Evolve(FieldTask *fieldTask);
 static BOOL StartMenu_SelectRetire(FieldTask *fieldTask);
+static BOOL StartMenu_SelectPC(FieldTask *fieldTask);
 static void StartMenu_ProcessGivenMail(FieldSystem *fieldSystem, StartMenu *menu, u8 mode);
 
 typedef struct StartMenuAction {
@@ -198,6 +203,7 @@ static const StartMenuAction sStartMenuActions[] = {
     [START_MENU_OPTION_EXIT]         = { .bankEntry = StartMenu_Text_Exit,           .callback = (void *)MENU_CANCEL         },
     [START_MENU_OPTION_CHAT]         = { .bankEntry = StartMenu_Text_Chat,           .callback = StartMenu_SelectChat        },
     [START_MENU_OPTION_RETIRE]       = { .bankEntry = StartMenu_Text_Retire,         .callback = StartMenu_SelectRetire      },
+    [START_MENU_OPTION_PC]           = { .bankEntry = StartMenu_Text_PC,             .callback = StartMenu_SelectPC          },
 };
 // clang-format on
 
@@ -272,6 +278,7 @@ BOOL FieldSystem_IsInValidLocation(FieldSystem *fieldSystem)
 #define HIDE_OPTION_EXIT         (1 << 6)
 #define HIDE_OPTION_CHAT         (1 << 7)
 #define HIDE_OPTION_RETIRE       (1 << 8)
+#define HIDE_OPTION_PC           (1 << 9)
 
 void StartMenu_Open(FieldSystem *fieldSystem)
 {
@@ -384,32 +391,38 @@ static u32 StartMenu_GetNormalHiddenOptions(FieldSystem *fieldSystem)
     hideFlags |= HIDE_OPTION_CHAT;
     hideFlags |= HIDE_OPTION_RETIRE;
 
+    // Portable PC: only outdoors, and only once the player has a Pokémon.
+    if (!MapHeader_IsOutdoors(fieldSystem->location->mapHeaderID)
+        || (hideFlags & HIDE_OPTION_POKEMON)) {
+        hideFlags |= HIDE_OPTION_PC;
+    }
+
     return hideFlags;
 }
 
 static u32 StartMenu_GetSafariHiddenOptions(FieldSystem *fieldSystem)
 {
-    return HIDE_OPTION_SAVE | HIDE_OPTION_CHAT;
+    return HIDE_OPTION_SAVE | HIDE_OPTION_CHAT | HIDE_OPTION_PC;
 }
 
 static u32 StartMenu_GetPalParkHiddenOptions(FieldSystem *fieldSystem)
 {
-    return HIDE_OPTION_SAVE | HIDE_OPTION_CHAT | HIDE_OPTION_BAG;
+    return HIDE_OPTION_SAVE | HIDE_OPTION_CHAT | HIDE_OPTION_BAG | HIDE_OPTION_PC;
 }
 
 static u32 StartMenu_GetBattleTowerSalonHiddenOptions(FieldSystem *fieldSystem)
 {
-    return HIDE_OPTION_POKEDEX | HIDE_OPTION_BAG | HIDE_OPTION_SAVE | HIDE_OPTION_CHAT | HIDE_OPTION_RETIRE;
+    return HIDE_OPTION_POKEDEX | HIDE_OPTION_BAG | HIDE_OPTION_SAVE | HIDE_OPTION_CHAT | HIDE_OPTION_RETIRE | HIDE_OPTION_PC;
 }
 
 static u32 StartMenu_GetUnionRoomHiddenOptions(FieldSystem *fieldSystem)
 {
-    return HIDE_OPTION_SAVE | HIDE_OPTION_RETIRE;
+    return HIDE_OPTION_SAVE | HIDE_OPTION_RETIRE | HIDE_OPTION_PC;
 }
 
 static u32 StartMenu_GetColosseumHiddenOptions(FieldSystem *fieldSystem)
 {
-    return HIDE_OPTION_SAVE | HIDE_OPTION_POKEDEX | HIDE_OPTION_CHAT | HIDE_OPTION_RETIRE;
+    return HIDE_OPTION_SAVE | HIDE_OPTION_POKEDEX | HIDE_OPTION_CHAT | HIDE_OPTION_RETIRE | HIDE_OPTION_PC;
 }
 
 static BOOL StartMenu_Main(FieldTask *fieldTask)
@@ -595,10 +608,17 @@ static u32 StartMenu_MakeOptionList(StartMenu *menu, u8 *listOut)
     ADD_OPTION_IF_NOT_HIDDEN(START_MENU_OPTION_POKEDEX, HIDE_OPTION_POKEDEX);
     ADD_OPTION_IF_NOT_HIDDEN(START_MENU_OPTION_POKEMON, HIDE_OPTION_POKEMON);
     ADD_OPTION_IF_NOT_HIDDEN(START_MENU_OPTION_BAG, HIDE_OPTION_BAG);
+    ADD_OPTION_IF_NOT_HIDDEN(START_MENU_OPTION_PC, HIDE_OPTION_PC);
     ADD_OPTION_IF_NOT_HIDDEN(START_MENU_OPTION_TRAINER_CASE, HIDE_OPTION_TRAINER_CASE);
     ADD_OPTION_IF_NOT_HIDDEN(START_MENU_OPTION_SAVE, HIDE_OPTION_SAVE);
     ADD_OPTION_IF_NOT_HIDDEN(START_MENU_OPTION_OPTIONS, HIDE_OPTION_OPTIONS);
-    ADD_OPTION_IF_NOT_HIDDEN(START_MENU_OPTION_EXIT, HIDE_OPTION_EXIT);
+
+    // The menu only fits MAX_START_MENU_OPTIONS rows. When the PC row is shown on a full
+    // menu, EXIT is dropped (B and X still close the menu).
+    if (optionCount < MAX_START_MENU_OPTIONS) {
+        ADD_OPTION_IF_NOT_HIDDEN(START_MENU_OPTION_EXIT, HIDE_OPTION_EXIT);
+    }
+
     return optionCount;
 }
 
@@ -766,6 +786,8 @@ static void StartMenu_InitSprites(StartMenu *menu, u8 *options, u32 optionCount,
 
         if (options[i] == START_MENU_OPTION_BAG && gender == GENDER_FEMALE) {
             template.animIdx = 9 * ICON_ANIM_COUNT;
+        } else if (options[i] == START_MENU_OPTION_PC) {
+            template.animIdx = START_MENU_ICON_PC * ICON_ANIM_COUNT;
         } else {
             template.animIdx = options[i] * ICON_ANIM_COUNT;
         }
@@ -1456,6 +1478,22 @@ static BOOL StartMenu_SelectRetire(FieldTask *fieldTask)
     } else {
         ScriptManager_Change(fieldTask, 4, NULL);
     }
+
+    Heap_Free(menu);
+    return FALSE;
+}
+
+static BOOL StartMenu_SelectPC(FieldTask *fieldTask)
+{
+    StartMenu *menu = FieldTask_GetEnv(fieldTask);
+
+    StartMenu_Close(menu);
+    Window_EraseStandardFrame(&menu->primaryWindow, TRUE);
+    Bg_ScheduleTilemapTransfer(menu->primaryWindow.bgConfig, menu->primaryWindow.bgLayer);
+    Window_Remove(&menu->primaryWindow);
+    StartMenu_EraseBallCount(fieldTask);
+
+    ScriptManager_Change(fieldTask, SCRIPT_ID(COMMON_SCRIPTS, 58), NULL); // CommonScript_PortablePC
 
     Heap_Free(menu);
     return FALSE;

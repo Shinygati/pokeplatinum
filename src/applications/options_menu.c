@@ -14,6 +14,7 @@
 #include "heap.h"
 #include "menu.h"
 #include "message.h"
+#include "savedata.h"
 #include "narc.h"
 #include "network_icon.h"
 #include "overlay_manager.h"
@@ -26,7 +27,9 @@
 #include "sprite_system.h"
 #include "string_gf.h"
 #include "system.h"
+#include "system_flags.h"
 #include "text.h"
+#include "vars_flags.h"
 #include "vram_transfer.h"
 
 #include "res/graphics/options_menu/config_gra.naix"
@@ -63,7 +66,7 @@ enum OptionsMenuEntryID {
     ENTRY_BATTLE_STYLE,
     ENTRY_BUTTON_MODE,
     ENTRY_MESSAGE_BOX_FRAME,
-    ENTRY_CLOSE,
+    ENTRY_BATTLE_INTRO, // Replaces vanilla CLOSE row; B/START close the menu
 
     MAX_ENTRIES,
 };
@@ -109,12 +112,13 @@ typedef struct OptionsMenuData {
             OptionsMenuEntry battleStyle;
             OptionsMenuEntry buttonMode;
             OptionsMenuEntry messageBoxStyle;
-            OptionsMenuEntry close;
+            OptionsMenuEntry battleIntro;
         };
     } entries;
 
     Menu *yesNoChoice;
     u32 textPrinter;
+    BOOL quickBattleIntro;
     void *dummy2B0;
     void *dummy2B4;
     void *dummy2B8;
@@ -142,6 +146,26 @@ static void ProcessMainInput(OptionsMenuData *menuData);
 static u32 ProcessConfirmationInput(OptionsMenuData *menuData);
 
 static int TeardownMenuData(OptionsMenuData *menuData);
+
+#define TEXT_SPEED_CHOICE_INSTANT 3
+
+static VarsFlags *GetVarsFlags(void)
+{
+    SaveData *saveData = SaveData_PtrOrNull();
+    return saveData != NULL ? SaveData_GetVarsFlags(saveData) : NULL;
+}
+
+// INST is saved as FAST + the spare instantText bit (vanilla-compatible).
+static void ApplyTextSpeedChoice(Options *options, u16 choice)
+{
+    if (choice == TEXT_SPEED_CHOICE_INSTANT) {
+        Options_SetTextSpeed(options, OPTIONS_TEXT_SPEED_FAST);
+        Options_SetInstantText(options, TRUE);
+    } else {
+        Options_SetTextSpeed(options, choice);
+        Options_SetInstantText(options, FALSE);
+    }
+}
 static void TeardownBgs(OptionsMenuData *menuData);
 static void TeardownTilemaps(OptionsMenuData *menuData);
 static void TeardownWindows(OptionsMenuData *menuData);
@@ -157,6 +181,7 @@ BOOL OptionsMenu_Init(ApplicationManager *appMan, int *state)
     memset(menuData, 0, sizeof(OptionsMenuData));
 
     menuData->options.textSpeed = Options_TextSpeed(options);
+    menuData->options.instantText = Options_InstantText(options);
     menuData->options.battleScene = Options_BattleScene(options);
     menuData->options.battleStyle = Options_BattleStyle(options);
     menuData->options.soundMode = Options_SoundMode(options);
@@ -164,6 +189,9 @@ BOOL OptionsMenu_Init(ApplicationManager *appMan, int *state)
     menuData->options.messageBoxStyle = Options_Frame(options);
     menuData->heapID = HEAP_ID_OPTIONS_MENU;
     menuData->saveOptions = options;
+
+    VarsFlags *varsFlags = GetVarsFlags();
+    menuData->quickBattleIntro = varsFlags != NULL && SystemFlag_HandleQuickBattleIntro(varsFlags, HANDLE_FLAG_CHECK);
 
     RenderControlFlags_SetCanABSpeedUpPrint(FALSE);
 
@@ -175,7 +203,15 @@ BOOL OptionsMenu_Exit(ApplicationManager *appMan, int *state)
     OptionsMenuData *menuData = ApplicationManager_Data(appMan);
 
     if (menuData->saveSelections == 1) {
-        menuData->options.textSpeed = menuData->entries.textSpeed.selected;
+        if (menuData->entries.textSpeed.selected == TEXT_SPEED_CHOICE_INSTANT) {
+            menuData->options.textSpeed = OPTIONS_TEXT_SPEED_FAST;
+            menuData->options.instantText = TRUE;
+        } else {
+            menuData->options.textSpeed = menuData->entries.textSpeed.selected;
+            menuData->options.instantText = FALSE;
+        }
+
+        menuData->quickBattleIntro = menuData->entries.battleIntro.selected;
         menuData->options.battleScene = menuData->entries.battleScene.selected;
         menuData->options.battleStyle = menuData->entries.battleStyle.selected;
         menuData->options.soundMode = menuData->entries.soundMode.selected;
@@ -184,6 +220,14 @@ BOOL OptionsMenu_Exit(ApplicationManager *appMan, int *state)
     }
 
     Options_SetTextSpeed(menuData->saveOptions, menuData->options.textSpeed);
+    Options_SetInstantText(menuData->saveOptions, menuData->options.instantText);
+
+    VarsFlags *varsFlags = GetVarsFlags();
+
+    if (varsFlags != NULL) {
+        SystemFlag_HandleQuickBattleIntro(varsFlags, menuData->quickBattleIntro ? HANDLE_FLAG_SET : HANDLE_FLAG_CLEAR);
+    }
+
     Options_SetBattleScene(menuData->saveOptions, menuData->options.battleScene);
     Options_SetBattleStyle(menuData->saveOptions, menuData->options.battleStyle);
     Options_SetSoundMode(menuData->saveOptions, menuData->options.soundMode);
@@ -233,7 +277,7 @@ BOOL OptionsMenu_Main(ApplicationManager *appMan, int *state)
         break;
 
     case STATE_HANDLE_INPUT:
-        if ((JOY_NEW(PAD_BUTTON_A) && menuData->cursor == ENTRY_CLOSE) || JOY_NEW(PAD_BUTTON_B)) {
+        if (JOY_NEW(PAD_BUTTON_B | PAD_BUTTON_START)) {
             if (ChangesWereMade(menuData) == TRUE) {
                 menuData->state = STATE_CONFIRM_NEW_SETTINGS;
             } else {
@@ -683,7 +727,7 @@ static const u8 sEntryLabels[MAX_ENTRIES] = {
     OptionsMenu_Text_BattleStyleLabel,
     OptionsMenu_Text_ButtonModeLabel,
     OptionsMenu_Text_MessageBoxStyleLabel,
-    OptionsMenu_Text_CloseLabel,
+    OptionsMenu_Text_BattleIntroLabel,
 };
 
 static void PrintTitleAndEntries(OptionsMenuData *menuData)
@@ -727,13 +771,13 @@ static void PrintTitleAndEntries(OptionsMenuData *menuData)
 }
 
 static const int sNumChoicesPerEntry[MAX_ENTRIES] = {
-    3,
+    4,
     2,
     2,
     2,
     3,
     20,
-    0,
+    2,
 };
 
 static const u8 sFirstChoicePerEntry[MAX_ENTRIES] = {
@@ -743,8 +787,19 @@ static const u8 sFirstChoicePerEntry[MAX_ENTRIES] = {
     OptionsMenu_Text_BattleStyleShift,
     OptionsMenu_Text_ButtonModeNormal,
     OptionsMenu_Text_MessageBoxStyle_01,
-    NULL,
+    OptionsMenu_Text_BattleIntroNormal,
 };
+
+// New choices were appended to the end of the text bank, so look them up
+// explicitly instead of assuming they follow the vanilla ones.
+static u32 GetChoiceTextID(u16 entry, u16 choice)
+{
+    if (entry == ENTRY_TEXT_SPEED && choice == TEXT_SPEED_CHOICE_INSTANT) {
+        return OptionsMenu_Text_TextSpeedInstant;
+    }
+
+    return sFirstChoicePerEntry[entry] + choice;
+}
 
 static void LoadAllEntryChoices(OptionsMenuData *menuData)
 {
@@ -752,11 +807,17 @@ static void LoadAllEntryChoices(OptionsMenuData *menuData)
     for (i = 0; i < MAX_ENTRIES; i++) {
         menuData->entries.asArray[i].numChoices = sNumChoicesPerEntry[i];
         for (j = 0; j < sNumChoicesPerEntry[i]; j++) {
-            menuData->entries.asArray[i].choices[j] = MessageLoader_GetNewString(menuData->msgLoader, sFirstChoicePerEntry[i] + j);
+            menuData->entries.asArray[i].choices[j] = MessageLoader_GetNewString(menuData->msgLoader, GetChoiceTextID(i, j));
         }
     }
 
     menuData->entries.textSpeed.selected = menuData->options.textSpeed;
+
+    if (menuData->options.textSpeed == OPTIONS_TEXT_SPEED_FAST && menuData->options.instantText) {
+        menuData->entries.textSpeed.selected = TEXT_SPEED_CHOICE_INSTANT;
+    }
+
+    menuData->entries.battleIntro.selected = menuData->quickBattleIntro ? 1 : 0;
     menuData->entries.battleScene.selected = menuData->options.battleScene;
     menuData->entries.battleStyle.selected = menuData->options.battleStyle;
     menuData->entries.soundMode.selected = menuData->options.soundMode;
@@ -796,7 +857,7 @@ static void PrintEntryChoices(OptionsMenuData *menuData, u16 entry)
     } else if (entry == ENTRY_BUTTON_MODE) {
         Options_SetSystemButtonMode(NULL, menuData->entries.asArray[entry].selected);
     } else if (entry == ENTRY_TEXT_SPEED) {
-        Options_SetTextSpeed(menuData->saveOptions, menuData->entries.asArray[entry].selected);
+        ApplyTextSpeedChoice(menuData->saveOptions, menuData->entries.asArray[entry].selected);
         PrintEntryDescription(menuData, entry, FALSE);
     }
 
@@ -814,7 +875,7 @@ static void PrintEntryChoices(OptionsMenuData *menuData, u16 entry)
             textSpeed = TEXT_SPEED_NO_TRANSFER;
         }
 
-        if (entry == ENTRY_BUTTON_MODE) {
+        if (entry == ENTRY_BUTTON_MODE || entry == ENTRY_TEXT_SPEED) {
             Text_AddPrinterWithParamsAndColor(&menuData->windows.entries,
                 FONT_SYSTEM,
                 menuData->entries.asArray[entry].choices[i],
@@ -887,7 +948,7 @@ static void ProcessMainInput(OptionsMenuData *menuData)
 {
     OptionsMenuEntry *entry = &menuData->entries.asArray[menuData->cursor];
 
-    if (menuData->cursor != ENTRY_CLOSE) {
+    {
         if (JOY_NEW(PAD_KEY_RIGHT)) {
             entry->selected = (entry->selected + 1) % entry->numChoices;
             PrintEntryChoices(menuData, menuData->cursor);
@@ -922,7 +983,14 @@ static void ProcessMainInput(OptionsMenuData *menuData)
 
 static BOOL ChangesWereMade(OptionsMenuData *menuData)
 {
-    return menuData->options.textSpeed != menuData->entries.textSpeed.selected
+    u16 savedTextSpeedChoice = menuData->options.textSpeed;
+
+    if (savedTextSpeedChoice == OPTIONS_TEXT_SPEED_FAST && menuData->options.instantText) {
+        savedTextSpeedChoice = TEXT_SPEED_CHOICE_INSTANT;
+    }
+
+    return savedTextSpeedChoice != menuData->entries.textSpeed.selected
+        || menuData->quickBattleIntro != menuData->entries.battleIntro.selected
         || menuData->options.battleScene != menuData->entries.battleScene.selected
         || menuData->options.battleStyle != menuData->entries.battleStyle.selected
         || menuData->options.soundMode != menuData->entries.soundMode.selected
@@ -961,7 +1029,7 @@ static const u8 sEntryDescriptions[MAX_ENTRIES] = {
     OptionsMenu_Text_BattleStyleDescription,
     OptionsMenu_Text_ButtonModeDescription,
     OptionsMenu_Text_MessageBoxStyleDescription,
-    OptionsMenu_Text_CloseDescription,
+    OptionsMenu_Text_BattleIntroDescription,
 };
 
 static void PrintEntryDescription(OptionsMenuData *menuData, u16 entry, BOOL scheduleVRAMCopy)

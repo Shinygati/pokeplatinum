@@ -104,6 +104,11 @@ SaveData *SaveData_Ptr(void)
     return sSaveDataPtr;
 }
 
+SaveData *SaveData_PtrOrNull(void)
+{
+    return sSaveDataPtr;
+}
+
 void *SaveData_SaveTable(SaveData *saveData, int saveTableID)
 {
     GF_ASSERT(saveTableID < SAVE_TABLE_ENTRY_MAX);

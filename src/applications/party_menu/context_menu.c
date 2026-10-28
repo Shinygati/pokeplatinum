@@ -66,6 +66,7 @@ static void PartyMenu_SelectChooseWithLimit(PartyMenuApplication *application, i
 static void PartyMenu_PrintAllEligibilities(PartyMenuApplication *application, int *partyMenuState);
 static void PartyMenu_CleanupContextMenu2(PartyMenuApplication *application, int *partyMenuState);
 static void PartyMenu_SelectBallSeal(PartyMenuApplication *application, int *partyMenuState);
+static void PartyMenu_SelectEVs(PartyMenuApplication *application, int *partyMenuState);
 
 static enum PartyMenuState PartyMenuCB_TakeMail_Transfer(PartyMenuApplication *application);
 static enum PartyMenuState PartyMenuCB_TakeMail_PromptRemoval(PartyMenuApplication *application);
@@ -100,6 +101,7 @@ enum {
     ACTION_CLEANUP,
     ACTION_SET_CAPSULE,
     ACTION_CLEANUP_2,
+    ACTION_EVS, // must stay equal to PARTY_MENU_STR_EVS (field moves follow it)
     ACTION_CUT,
     ACTION_FLY,
     ACTION_SURF,
@@ -138,6 +140,7 @@ static const union PartyMenuActionFunc sPartyMenuActions[ACTION_MAX] = {
     [ACTION_CLEANUP] =     PartyMenu_CleanupContextMenu,
     [ACTION_SET_CAPSULE] = PartyMenu_SetBallCapsuleAction,
     [ACTION_CLEANUP_2] =   PartyMenu_CleanupContextMenu2,
+    [ACTION_EVS] =         PartyMenu_SelectEVs,
     [ACTION_CUT] =         PartyMenu_SelectCut,
     [ACTION_FLY] =         PartyMenu_SelectFly,
     [ACTION_SURF] =        PartyMenu_SelectSurf,
@@ -1049,4 +1052,131 @@ enum PartyMenuState PartyMenu_WaitABPress(PartyMenuApplication *application)
     }
 
     return PARTY_MENU_STATE_WAIT_AB_PRESS;
+}
+
+#define EV_EDIT_MAX_PER_STAT 252
+
+// Offsets from MON_DATA_HP_EV for each editor row. Rows follow the level-up stat order
+// (HP, ATTACK, DEFENSE, SP. ATK, SP. DEF, SPEED); EV data is stored as HP, ATK, DEF, SPEED, SP. ATK, SP. DEF.
+static const u8 sEVEditDataOffsets[STAT_MAX] = { 0, 1, 2, 4, 5, 3 };
+
+// EV editor: opened from the EVS button of the party Pokemon menu.
+// The values are edited on a working copy and only written to the Pokemon when A is pressed.
+static void PartyMenu_SelectEVs(PartyMenuApplication *application, int *partyMenuState)
+{
+    Pokemon *mon = Party_GetPokemonBySlotIndex(application->partyMenu->party, application->currPartySlot);
+
+    Window_EraseMessageBox(&application->windows[PARTY_MENU_WIN_MEDIUM_MESSAGE], TRUE);
+    PartyMenu_ClearContextWindow(application);
+
+    for (u32 stat = 0; stat < STAT_MAX; stat++) {
+        application->evEditValues[stat] = Pokemon_GetValue(mon, MON_DATA_HP_EV + sEVEditDataOffsets[stat], NULL);
+    }
+
+    application->evEditSelection = 0;
+    PartyMenu_DrawEVEditor(application, TRUE);
+    PartyMenu_PrintLongMessage(application, PartyMenu_Text_EVEditHelp, TRUE);
+
+    *partyMenuState = PARTY_MENU_STATE_EDIT_EVS;
+}
+
+static u32 PartyMenu_EVEditTotal(PartyMenuApplication *application)
+{
+    u32 total = 0;
+
+    for (u32 stat = 0; stat < STAT_MAX; stat++) {
+        total += application->evEditValues[stat];
+    }
+
+    return total;
+}
+
+static enum PartyMenuState PartyMenu_CloseEVEdit(PartyMenuApplication *application, BOOL save)
+{
+    if (save == TRUE) {
+        Pokemon *mon = Party_GetPokemonBySlotIndex(application->partyMenu->party, application->currPartySlot);
+
+        for (u32 stat = 0; stat < STAT_MAX; stat++) {
+            u8 ev = application->evEditValues[stat];
+            Pokemon_SetValue(mon, MON_DATA_HP_EV + sEVEditDataOffsets[stat], &ev);
+        }
+
+        Pokemon_CalcStats(mon);
+
+        PartyMenu_LoadMember(application, application->currPartySlot);
+        PartyMenu_DrawMemberPanelData(application, application->currPartySlot);
+        // Only reload the pixel data. PartyMenu_CopyMemberWindowToVRAM would also clear the windows' tilemap entries.
+        PartyMenu_LoadMemberWindowTiles(application, application->currPartySlot);
+    }
+
+    PartyMenu_RemoveContextWindow(application);
+    Window_EraseMessageBox(&application->windows[PARTY_MENU_WIN_LONG_MESSAGE], TRUE);
+    PartyMenu_PrintShortMessage(application, PartyMenu_Text_ChooseAPokemon, TRUE);
+    Sprite_SetExplicitPalette2(application->sprites[PARTY_MENU_SPRITE_CURSOR_NORMAL], 0);
+
+    return PARTY_MENU_STATE_DEFAULT;
+}
+
+enum PartyMenuState PartyMenu_HandleEVEdit(PartyMenuApplication *application)
+{
+    int delta = 0;
+    BOOL redraw = FALSE;
+
+    // ignore input while the help text is still being printed
+    if (Text_IsPrinterActive(application->textPrinterID)) {
+        return PARTY_MENU_STATE_EDIT_EVS;
+    }
+
+    if (JOY_REPEAT(PAD_KEY_UP)) {
+        application->evEditSelection = (application->evEditSelection + STAT_MAX - 1) % STAT_MAX;
+        redraw = TRUE;
+    } else if (JOY_REPEAT(PAD_KEY_DOWN)) {
+        application->evEditSelection = (application->evEditSelection + 1) % STAT_MAX;
+        redraw = TRUE;
+    } else if (JOY_REPEAT(PAD_KEY_LEFT)) {
+        delta = -1;
+    } else if (JOY_REPEAT(PAD_KEY_RIGHT)) {
+        delta = 1;
+    } else if (JOY_REPEAT(PAD_BUTTON_L)) {
+        delta = -10;
+    } else if (JOY_REPEAT(PAD_BUTTON_R)) {
+        delta = 10;
+    } else if (JOY_NEW(PAD_BUTTON_A)) {
+        Sound_PlayEffect(SEQ_SE_DP_POKELIST_001_sseq);
+        return PartyMenu_CloseEVEdit(application, TRUE);
+    } else if (JOY_NEW(PAD_BUTTON_B)) {
+        Sound_PlayEffect(SEQ_SE_DP_POKELIST_001_sseq);
+        return PartyMenu_CloseEVEdit(application, FALSE);
+    }
+
+    if (delta != 0) {
+        int current = application->evEditValues[application->evEditSelection];
+        int othersTotal = (int)PartyMenu_EVEditTotal(application) - current;
+        int limit = MAX_EVS_ALL_STATS - othersTotal;
+        int next = current + delta;
+
+        if (limit > EV_EDIT_MAX_PER_STAT) {
+            limit = EV_EDIT_MAX_PER_STAT;
+        }
+
+        if (next > limit) {
+            next = limit;
+        }
+
+        if (next < 0) {
+            next = 0;
+        }
+
+        if (next != current) {
+            application->evEditValues[application->evEditSelection] = next;
+            redraw = TRUE;
+        }
+    }
+
+    if (redraw == TRUE) {
+        Sound_PlayEffect(SEQ_SE_DP_POKELIST_001_sseq);
+        PartyMenu_DrawEVEditor(application, FALSE);
+    }
+
+    return PARTY_MENU_STATE_EDIT_EVS;
 }

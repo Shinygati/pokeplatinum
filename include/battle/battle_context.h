@@ -317,7 +317,8 @@ struct BattleContext {
     int waitingBattlers;
 
     u32 battleProgressFlag : 1;
-    u32 padding3154_01 : 31;
+    u32 partyReceivedEXPTextDone : 1; // fork: "party gained EXP" message already shown this turn
+    u32 padding3154_02 : 30;
 };
 
 #endif // POKEPLATINUM_BATTLE_BATTLE_CONTEXT_H

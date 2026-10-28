@@ -262,10 +262,7 @@ static BOOL FishingTask_WaitForFish(FishingTask *fishingTask, PlayerAvatar *play
 {
     fishingTask->fishDelayCounter--;
 
-    if (TryPressA() == TRUE) {
-        fishingTask->fishingTask = FUNC_FishingTask_ReeledInEarly;
-        return TRUE;
-    }
+    // A fish is guaranteed here, so reeling in early is ignored instead of losing it.
 
     if (fishingTask->fishDelayCounter > 0) {
         return FALSE;
@@ -292,9 +289,10 @@ static BOOL FishingTask_CheckForReelInFish(FishingTask *fishingTask, PlayerAvata
         return FALSE;
     }
 
-    fishingTask->fishingTask = FUNC_FishingTask_FishGotAway;
+    // Hooked fish never get away: if A isn't pressed in time, reel it in anyway.
+    fishingTask->fishingTask = FUNC_FishingTask_CaughtFish;
 
-    return FALSE;
+    return TRUE;
 }
 
 static BOOL FishingTask_CaughtFish(FishingTask *fishingTask, PlayerAvatar *playerAvatar, MapObject *playerMapObject)

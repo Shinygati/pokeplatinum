@@ -845,6 +845,8 @@ ScriptCommand(SCRCMD_BUFFERTRAINERCLASSNAMEWITHARTICLE,                    ScrCm
 ScriptCommand(SCRCMD_BUFFERBALLSEALNAMEPLURAL,                             ScrCmd_BufferBallSealNamePlural)
 ScriptCommand(SCRCMD_CAPITALIZEFIRSTLETTER,                                ScrCmd_CapitalizeFirstLetter)
 ScriptCommand(SCRCMD_BUFFERFLOORNUMBER,                                    ScrCmd_BufferFloorNumber)
+ScriptCommand(SCRCMD_RESETEVS,                                            ScrCmd_ResetEVs)
+ScriptCommand(SCRCMD_USESTRONGESTREPEL,                                    ScrCmd_UseStrongestRepel)
 
 // clang-format on
 

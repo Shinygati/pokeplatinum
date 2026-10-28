@@ -34,6 +34,9 @@
 #include "res/text/bank/battle_strings.h"
 
 #define HEALTHBOX_SCROLL_SPEED      24
+
+#define HEALTHBOX_HP_GAUGE_STEPS_PER_FRAME  2
+#define HEALTHBOX_EXP_GAUGE_STEPS_PER_FRAME 3
 #define HEALTHBOX_SCROLL_OUT_OFFSET 160
 
 #define HEALTHBOX_X_OFFSET_SOLO_PLAYER   192
@@ -1376,7 +1379,14 @@ static s32 HealthBox_DrawGauge(HealthBox *healthbox, enum HealthBoxGaugeType gau
     s32 fillOffset;
 
     if (gaugeType == HEALTHBOX_GAUGE_HP) {
-        result = UpdateGauge(healthbox->maxHP, healthbox->curHP, healthbox->damage, &healthbox->hpTemp, HEALTHBOX_HP_CELL_COUNT, 1);
+        // Faster HP drain: advance the gauge several steps per frame.
+        for (int i = 0; i < HEALTHBOX_HP_GAUGE_STEPS_PER_FRAME; i++) {
+            result = UpdateGauge(healthbox->maxHP, healthbox->curHP, healthbox->damage, &healthbox->hpTemp, HEALTHBOX_HP_CELL_COUNT, 1);
+
+            if (result == -1) {
+                break;
+            }
+        }
     } else {
         fillOffset = CalcGaugeFill(healthbox->curExp, healthbox->expReward, healthbox->maxExp, HEALTHBOX_EXP_CELL_COUNT);
 
@@ -1385,7 +1395,15 @@ static s32 HealthBox_DrawGauge(HealthBox *healthbox, enum HealthBoxGaugeType gau
         }
 
         fillOffset = abs(healthbox->expReward / fillOffset);
-        result = UpdateGauge(healthbox->maxExp, healthbox->curExp, healthbox->expReward, &healthbox->expTemp, HEALTHBOX_EXP_CELL_COUNT, fillOffset);
+
+        // Faster EXP fill: advance the gauge several steps per frame.
+        for (int i = 0; i < HEALTHBOX_EXP_GAUGE_STEPS_PER_FRAME; i++) {
+            result = UpdateGauge(healthbox->maxExp, healthbox->curExp, healthbox->expReward, &healthbox->expTemp, HEALTHBOX_EXP_CELL_COUNT, fillOffset);
+
+            if (result == -1) {
+                break;
+            }
+        }
     }
 
     if (gaugeType != HEALTHBOX_GAUGE_HP || healthbox->numberMode != TRUE) {

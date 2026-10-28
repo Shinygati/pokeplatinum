@@ -71,6 +71,11 @@ BOOL SystemFlag_CheckGameCompleted(VarsFlags *varsFlags)
     return CheckFlag(varsFlags, FLAG_GAME_COMPLETED);
 }
 
+BOOL SystemFlag_HandleQuickBattleIntro(VarsFlags *varsFlags, enum HandleFlagOp op)
+{
+    return HandleFlag(varsFlags, op, FLAG_QOL_QUICK_BATTLE_INTRO);
+}
+
 void SystemFlag_SetHasPartner(VarsFlags *varsFlags)
 {
     SetFlag(varsFlags, FLAG_HAS_PARTNER);

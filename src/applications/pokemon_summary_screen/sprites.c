@@ -1359,7 +1359,7 @@ void PokemonSummaryScreen_UpdateMiscMonDataSprites(PokemonSummaryScreen *summary
         }
     }
 
-    if (summaryScreen->monData.isShiny == TRUE && summaryScreen->monData.isEgg == FALSE) {
+    if (summaryScreen->monData.isShiny == TRUE) { // fork: eggs too (see SetMonDataFromMon)
         Sprite_SetDrawFlag2(summaryScreen->sprites[SUMMARY_SPRITE_SHINY_ICON], TRUE);
     } else {
         Sprite_SetDrawFlag2(summaryScreen->sprites[SUMMARY_SPRITE_SHINY_ICON], FALSE);

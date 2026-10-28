@@ -9,7 +9,7 @@
 
 // Shiny odds (1 in N). Change these to retune the whole game.
 #define SHINY_ODDS_BASE   4096 // wild, static/legendary, honey tree
-#define SHINY_ODDS_GIFT   512  // script gifts (starters, fossils, Eevee, ...) and gift eggs
+#define SHINY_ODDS_GIFT   4096  // script gifts (starters, fossils, Eevee, ...) and gift eggs
 #define SHINY_ODDS_EGG    512  // daycare eggs, regardless of parent languages
 #define SHINY_ODDS_ROAMER 100  // Mesprit, Cresselia, Articuno, Zapdos, Moltres
 
@@ -86,6 +86,15 @@ u32 LegalShiny_AdjustEggPersonality(u32 personality, u32 otID, BOOL shiny);
 // for gifts: rolls 1/odds against otID; a shiny gets a legal Method 1 PID with 2x31 IVs, otherwise
 // a normal Method 1 PID that is never shiny.
 void Pokemon_InitGiftWithLegalShinyOdds(Pokemon *mon, int species, int level, u32 otID, u32 odds);
+
+// The roll Pokemon_InitGiftWithLegalShinyOdds makes, exposed so a gift can be decided early
+// (the starter briefcase shows the result before the Pokémon is given).
+void LegalShiny_RollGiftFrame(u32 otID, u32 odds, LegalFrame *out);
+
+// A pre-rolled frame for the next script gift of this species. Pokemon_InitGiftWithLegalShinyOdds
+// uses (and clears) it instead of rolling. Kept in RAM only, never in the save.
+void LegalShiny_SetPendingGift(u16 species, const LegalFrame *frame);
+void LegalShiny_ClearPendingGift(void);
 #endif
 
 #endif // POKEPLATINUM_LEGAL_SHINY_H

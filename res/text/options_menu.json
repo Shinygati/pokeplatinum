@@ -176,7 +176,7 @@
     {
       "id": "OptionsMenu_Text_TextSpeedDescription",
       "en_US": [
-        "Choose one of three text-display\n",
+        "Choose one of four text-display\n",
         "speeds."
       ]
     },
@@ -224,6 +224,29 @@
     {
       "id": "OptionsMenu_Text_CloseDescription",
       "en_US": "Return to the game."
+    },
+    {
+      "id": "OptionsMenu_Text_TextSpeedInstant",
+      "en_US": "INST"
+    },
+    {
+      "id": "OptionsMenu_Text_BattleIntroLabel",
+      "en_US": "BATTLE INTRO"
+    },
+    {
+      "id": "OptionsMenu_Text_BattleIntroNormal",
+      "en_US": "NORMAL"
+    },
+    {
+      "id": "OptionsMenu_Text_BattleIntroQuick",
+      "en_US": "QUICK"
+    },
+    {
+      "id": "OptionsMenu_Text_BattleIntroDescription",
+      "en_US": [
+        "QUICK speeds up the slide-in at the\n",
+        "start of battles. Press B to close."
+      ]
     }
   ]
 }

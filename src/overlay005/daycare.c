@@ -332,16 +332,20 @@ static int Daycare_GetParentToInheritNature(Daycare *daycare)
         }
     }
 
-    // Don't inherit nature if not holding Everstone
-    if (BoxPokemon_GetValue(boxMon[slot], MON_DATA_HELD_ITEM, NULL) == ITEM_EVERSTONE) {
-        if (LCRNG_Next() >= (0xffff / 2)) {
-            return -1;
-        }
-    } else {
-        return -1;
+    // Fork (Gen 6 style): an Everstone on EITHER parent always passes that parent's nature.
+    // The mother / Ditto slot still wins if both hold one. Egg PIDs have no RNG correlation in
+    // Gen 4, so this stays legal.
+    if (slot >= 0 && BoxPokemon_GetValue(boxMon[slot], MON_DATA_HELD_ITEM, NULL) == ITEM_EVERSTONE) {
+        return slot;
     }
 
-    return slot;
+    for (i = 0; i < NUM_DAYCARE_MONS; i++) {
+        if (BoxPokemon_GetValue(boxMon[i], MON_DATA_HELD_ITEM, NULL) == ITEM_EVERSTONE) {
+            return i;
+        }
+    }
+
+    return -1;
 }
 
 static void Daycare_SetInheritedNature(Daycare *daycare)
@@ -394,24 +398,38 @@ static void RemoveIVIndexFromList(u8 *ivs, u8 selectedIV)
     }
 }
 
+// Fork (Gen 6 style): a Destiny Knot on either parent passes 5 IVs instead of 3.
+#define NUM_INHERITED_IVS_DESTINY_KNOT 5
+
 static void Egg_InheritIVs(Pokemon *egg, Daycare *daycare)
 {
-    u8 selectedIVs[NUM_INHERITED_IVS], i, availableIVs[STAT_MAX], slots[NUM_INHERITED_IVS], value;
+    u8 selectedIVs[NUM_INHERITED_IVS_DESTINY_KNOT], i, availableIVs[STAT_MAX], slots[NUM_INHERITED_IVS_DESTINY_KNOT], value;
+    u8 numInherited = NUM_INHERITED_IVS;
+
+    for (i = 0; i < NUM_DAYCARE_MONS; i++) {
+        if (BoxPokemon_GetValue(Daycare_GetBoxMon(daycare, i), MON_DATA_HELD_ITEM, NULL) == ITEM_DESTINY_KNOT) {
+            numInherited = NUM_INHERITED_IVS_DESTINY_KNOT;
+        }
+    }
 
     for (i = 0; i < STAT_MAX; i++) {
         availableIVs[i] = i;
     }
 
-    for (i = 0; i < NUM_INHERITED_IVS; i++) {
-        selectedIVs[i] = availableIVs[LCRNG_Next() % (STAT_MAX - i)];
-        RemoveIVIndexFromList(availableIVs, i);
+    // Pick distinct stats (vanilla removed the wrong list entry, so a stat could repeat and fewer
+    // than 3 IVs were passed down).
+    for (i = 0; i < numInherited; i++) {
+        u8 pick = LCRNG_Next() % (STAT_MAX - i);
+
+        selectedIVs[i] = availableIVs[pick];
+        RemoveIVIndexFromList(availableIVs, pick);
     }
 
-    for (i = 0; i < NUM_INHERITED_IVS; i++) {
+    for (i = 0; i < numInherited; i++) {
         slots[i] = LCRNG_Next() % NUM_DAYCARE_MONS;
     }
 
-    for (i = 0; i < NUM_INHERITED_IVS; i++) {
+    for (i = 0; i < numInherited; i++) {
         BoxPokemon *daycareBoxMon = Daycare_GetBoxMon(daycare, slots[i]);
 
         switch (selectedIVs[i]) {
@@ -1241,6 +1259,13 @@ void Egg_CreateHatchedMon(Pokemon *egg, enum HeapID heapID)
     Pokemon_SetValue(egg, MON_DATA_POKEBALL, &ball);
     Pokemon_SetValue(egg, MON_DATA_MET_LEVEL, &metLevel);
     Pokemon_CalcLevelAndStats(egg);
+}
+
+// BUILD STUB: declared in daycare.h and called from egg_hatch.c, but the body was
+// not in the pushed repo. Keep your local version if you have one.
+void Egg_CreateHatchedMonForHatcher(Pokemon *egg, u32 hatcherID, enum HeapID heapID)
+{
+    Egg_CreateHatchedMon(egg, heapID);
 }
 
 u32 BoxMon_GetPairDaycareCompatibilityLevel(BoxPokemon **boxMonPair)

@@ -8,6 +8,8 @@
 #include "struct_defs/radar_chain_records.h"
 
 #include "field/field_system.h"
+#include "field/field_system_sub2_t.h"
+#include "overlay005/map_name_popup.h"
 #include "overlay005/ov5_021F2D20.h"
 #include "overlay006/radar_chain_records.h"
 
@@ -17,7 +19,9 @@
 #include "gfx_box_test.h"
 #include "heap.h"
 #include "inlines.h"
+#include "map_header.h"
 #include "map_matrix.h"
+#include "message.h"
 #include "map_object.h"
 #include "map_tile_behavior.h"
 #include "overworld_anim_manager.h"
@@ -25,8 +29,14 @@
 #include "scrcmd.h"
 #include "script_manager.h"
 #include "sound_playback.h"
+#include "string_gf.h"
+#include "string_template.h"
 #include "special_encounter.h"
 #include "terrain_collision_manager.h"
+
+#include "generated/text_banks.h"
+
+#include "res/text/bank/start_menu.h"
 
 typedef struct {
     int x;
@@ -440,6 +450,7 @@ BOOL RefreshRadarChain(FieldTask *taskMan)
             if (fieldSystem->chain->active) {
                 SetupGrassPatches(fieldSystem, 0x1, fieldSystem->chain);
                 FieldSystem_CreateShakingRadarPatches(fieldSystem, fieldSystem->chain);
+                PokeRadar_ShowChainCount(fieldSystem);
                 *v1 = 1;
             } else {
                 *v1 = 3;
@@ -491,6 +502,35 @@ void RadarChain_Increment(FieldSystem *fieldSystem)
 {
     IncWithCap(&(fieldSystem->chain->count));
     TryReplaceLowestChainRecord(fieldSystem, fieldSystem->chain);
+}
+
+// On-screen chain counter: slides in the location-name banner with the current chain length.
+void PokeRadar_ShowChainCount(FieldSystem *fieldSystem)
+{
+    if (!GetRadarChainActive(fieldSystem->chain) || fieldSystem->chain->count == 0) {
+        return;
+    }
+
+    MessageLoader *loader = MessageLoader_Init(MSG_LOADER_LOAD_ON_DEMAND, NARC_INDEX_MSGDATA__PL_MSG, TEXT_BANK_START_MENU, HEAP_ID_FIELD1);
+    StringTemplate *template = StringTemplate_Default(HEAP_ID_FIELD1);
+    String *fmt = MessageLoader_GetNewString(loader, StartMenu_Text_RadarChain);
+    String *text = String_Init(22, HEAP_ID_FIELD1);
+
+    StringTemplate_SetNumber(template, 0, fieldSystem->chain->count, 3, PADDING_MODE_NONE, CHARSET_MODE_EN);
+    StringTemplate_Format(template, text, fmt);
+
+    s32 windowID = MapHeader_GetMapLabelWindowID(fieldSystem->location->mapHeaderID);
+
+    if (windowID != 0) {
+        windowID--;
+    }
+
+    MapNamePopUp_ShowString(fieldSystem->unk_04->mapPopup, text, windowID);
+
+    String_Free(text);
+    String_Free(fmt);
+    StringTemplate_Free(template);
+    MessageLoader_Free(loader);
 }
 
 int GetChainCount(FieldSystem *fieldSystem)

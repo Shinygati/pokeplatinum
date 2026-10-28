@@ -1,7 +1,7 @@
 {
 	"labelEnabled":	true,
-	"sequenceCount":	30,
-	"frameCount":	180,
+	"sequenceCount":	33,
+	"frameCount":	198,
 	"sequences":	[{
 			"frameCount":	1,
 			"loopStartFrame":	0,
@@ -751,6 +751,81 @@
 				}, {
 					"frameDelay":	2,
 					"resultId":	97
+				}]
+		}, {
+			"frameCount":	1,
+			"loopStartFrame":	0,
+			"animationElement":	0,
+			"animationType":	1,
+			"playbackMode":	1,
+			"frameData":	[{
+					"frameDelay":	1,
+					"resultId":	100
+				}]
+		}, {
+			"frameCount":	5,
+			"loopStartFrame":	0,
+			"animationElement":	1,
+			"animationType":	1,
+			"playbackMode":	1,
+			"frameData":	[{
+					"frameDelay":	1,
+					"resultId":	101
+				}, {
+					"frameDelay":	3,
+					"resultId":	102
+				}, {
+					"frameDelay":	3,
+					"resultId":	103
+				}, {
+					"frameDelay":	3,
+					"resultId":	102
+				}, {
+					"frameDelay":	1,
+					"resultId":	101
+				}]
+		}, {
+			"frameCount":	12,
+			"loopStartFrame":	0,
+			"animationElement":	1,
+			"animationType":	1,
+			"playbackMode":	2,
+			"frameData":	[{
+					"frameDelay":	2,
+					"resultId":	101
+				}, {
+					"frameDelay":	2,
+					"resultId":	104
+				}, {
+					"frameDelay":	2,
+					"resultId":	105
+				}, {
+					"frameDelay":	2,
+					"resultId":	106
+				}, {
+					"frameDelay":	2,
+					"resultId":	105
+				}, {
+					"frameDelay":	2,
+					"resultId":	104
+				}, {
+					"frameDelay":	2,
+					"resultId":	101
+				}, {
+					"frameDelay":	2,
+					"resultId":	107
+				}, {
+					"frameDelay":	2,
+					"resultId":	108
+				}, {
+					"frameDelay":	2,
+					"resultId":	109
+				}, {
+					"frameDelay":	2,
+					"resultId":	108
+				}, {
+					"frameDelay":	2,
+					"resultId":	107
 				}]
 		}],
 	"animationResults":	[{
@@ -1503,8 +1578,83 @@
 			"scaleY":	4096,
 			"positionX":	0,
 			"positionY":	0
+		}, {
+			"resultType":	0,
+			"index":	10
+		}, {
+			"resultType":	1,
+			"index":	10,
+			"rotation":	0,
+			"scaleX":	4096,
+			"scaleY":	4096,
+			"positionX":	0,
+			"positionY":	0
+		}, {
+			"resultType":	1,
+			"index":	10,
+			"rotation":	0,
+			"scaleX":	4506,
+			"scaleY":	4506,
+			"positionX":	0,
+			"positionY":	0
+		}, {
+			"resultType":	1,
+			"index":	10,
+			"rotation":	0,
+			"scaleX":	5325,
+			"scaleY":	5325,
+			"positionX":	0,
+			"positionY":	0
+		}, {
+			"resultType":	1,
+			"index":	10,
+			"rotation":	728,
+			"scaleX":	4096,
+			"scaleY":	4096,
+			"positionX":	0,
+			"positionY":	0
+		}, {
+			"resultType":	1,
+			"index":	10,
+			"rotation":	1456,
+			"scaleX":	4096,
+			"scaleY":	4096,
+			"positionX":	0,
+			"positionY":	0
+		}, {
+			"resultType":	1,
+			"index":	10,
+			"rotation":	1820,
+			"scaleX":	4096,
+			"scaleY":	4096,
+			"positionX":	0,
+			"positionY":	0
+		}, {
+			"resultType":	1,
+			"index":	10,
+			"rotation":	64808,
+			"scaleX":	4096,
+			"scaleY":	4096,
+			"positionX":	0,
+			"positionY":	0
+		}, {
+			"resultType":	1,
+			"index":	10,
+			"rotation":	64080,
+			"scaleX":	4096,
+			"scaleY":	4096,
+			"positionX":	0,
+			"positionY":	0
+		}, {
+			"resultType":	1,
+			"index":	10,
+			"rotation":	63716,
+			"scaleX":	4096,
+			"scaleY":	4096,
+			"positionX":	0,
+			"positionY":	0
 		}],
-	"resultCount":	100,
-	"labels":	["ca_00", "ca_01", "ca_02", "ca_10", "ca_11", "ca_12", "ca_20", "ca_21", "ca_22", "ca_30", "ca_31", "ca_32", "ca_40", "ca_41", "ca_42", "ca_50", "ca_51", "ca_52", "ca_60", "ca_61", "ca_62", "ca_70", "ca_71", "ca_72", "ca_80", "ca_81", "ca_82", "ca_90", "ca_91", "ca_92"],
-	"labelCount":	30
+	"resultCount":	110,
+	"labels":	["ca_00", "ca_01", "ca_02", "ca_10", "ca_11", "ca_12", "ca_20", "ca_21", "ca_22", "ca_30", "ca_31", "ca_32", "ca_40", "ca_41", "ca_42", "ca_50", "ca_51", "ca_52", "ca_60", "ca_61", "ca_62", "ca_70", "ca_71", "ca_72", "ca_80", "ca_81", "ca_82", "ca_90", "ca_91", "ca_92", "ca_a0", "ca_a1", "ca_a2"],
+	"labelCount":	33
 }
